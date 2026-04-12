@@ -1,0 +1,19 @@
+# Claude Code tooling - personal, do not commit
+.claude/
+CLAUDE.md
+
+# Genetec scripting guide - licensed, too large, drop locally
+Guide/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Backup and temp files
+*.bak
+*.tmp
+~$*
