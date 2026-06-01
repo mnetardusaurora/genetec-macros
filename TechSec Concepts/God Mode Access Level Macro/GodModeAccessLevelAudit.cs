@@ -134,7 +134,9 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 MacroLogger.TraceInformation(
                     "Auto-add disabled (report-only). No changes written.");
             }
-            // Summary                  -> Task 7
+            MacroLogger.TraceInformation(
+                $"Audit summary: scanned={scanned}, missing={missingDoorGuids.Count}, " +
+                $"autoAdd={(EnableAutoAdd ? "on" : "off")}.");
             MacroLogger.TraceInformation("GodModeAccessLevelAudit.Execute() completed.");
         }
         catch (Exception ex)
