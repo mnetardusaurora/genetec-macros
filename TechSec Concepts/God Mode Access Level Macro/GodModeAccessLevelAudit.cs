@@ -116,7 +116,7 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                     MacroLogger.TraceWarning(
                         $"MISSING: door '{door.Name}' ({doorGuid}) is not fully in God Mode.");
                     missingDoorGuids.Add(doorGuid);
-                    // Task 5: raise alarm here.
+                    RaiseMissingDoorAlarm(door);
                 }
             }
             // Auto-add (if enabled)    -> Task 6
@@ -180,6 +180,23 @@ public sealed class GodModeAccessLevelAudit : UserMacro
             points.Add(new KeyValuePair<string, AccessPoint>(sideLabel + ":Rex", side.Rex));
         if (side.EntrySensor != null)
             points.Add(new KeyValuePair<string, AccessPoint>(sideLabel + ":EntrySensor", side.EntrySensor));
+    }
+
+    private void RaiseMissingDoorAlarm(Door door)
+    {
+        var content = new DynamicAlarmContent(
+            $"God Mode is missing door: {door.Name} ({door.Guid})");
+        content.AttachedEntities.Add(door.Guid);
+
+        int instanceId = Sdk.AlarmManager.TriggerAlarm(
+            MissingDoorAlarm, door.Guid, content);
+
+        if (instanceId == -1)
+            MacroLogger.TraceWarning(
+                $"TriggerAlarm returned -1 for door '{door.Name}' ({door.Guid}).");
+        else
+            MacroLogger.TraceInformation(
+                $"Raised alarm instance {instanceId} for door '{door.Name}'.");
     }
 
     protected override void CleanUp()
