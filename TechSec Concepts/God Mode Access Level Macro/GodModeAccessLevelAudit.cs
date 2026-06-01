@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using Genetec.Sdk;
 using Genetec.Sdk.Scripting;
 using Genetec.Sdk.Entities;
@@ -75,7 +76,7 @@ public sealed class GodModeAccessLevelAudit : UserMacro
 
             MacroLogger.TraceInformation(
                 $"Auditing rule '{godModeRule.Name}'. EnableAutoAdd={EnableAutoAdd}.");
-            // Enumerate all doors      -> Task 3
+            List<Guid> doorGuids = GetAllDoorGuids();
             // Check each door + alarm  -> Task 4 + Task 5
             // Auto-add (if enabled)    -> Task 6
             // Summary                  -> Task 7
@@ -85,6 +86,32 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         {
             MacroLogger.TraceError(ex, "GodModeAccessLevelAudit.Execute() failed.");
         }
+    }
+
+    private List<Guid> GetAllDoorGuids()
+    {
+        var doorGuids = new List<Guid>();
+        var query = Sdk.ReportManager.CreateReportQuery(ReportType.EntityConfiguration)
+            as EntityConfigurationQuery;
+        query.EntityTypeFilter.Add(EntityType.Door);
+
+        // Synchronous: blocks, returns results, and caches the doors. Run BEFORE any
+        // transaction — Query() throws inside a transaction with pending updates.
+        QueryCompletedEventArgs result = query.Query();
+        if (result != null && result.Success)
+        {
+            foreach (DataRow row in result.Data.Rows)
+            {
+                doorGuids.Add((Guid)row["Guid"]);
+            }
+        }
+        else
+        {
+            MacroLogger.TraceWarning("Door enumeration query did not succeed.");
+        }
+
+        MacroLogger.TraceInformation($"Enumerated {doorGuids.Count} door(s).");
+        return doorGuids;
     }
 
     protected override void CleanUp()
