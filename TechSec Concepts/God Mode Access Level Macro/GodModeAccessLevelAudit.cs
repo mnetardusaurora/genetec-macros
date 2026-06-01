@@ -77,7 +77,48 @@ public sealed class GodModeAccessLevelAudit : UserMacro
             MacroLogger.TraceInformation(
                 $"Auditing rule '{godModeRule.Name}'. EnableAutoAdd={EnableAutoAdd}.");
             List<Guid> doorGuids = GetAllDoorGuids();
-            // Check each door + alarm  -> Task 4 + Task 5
+            // The rule's access points, captured once. RelatedAccessPoints is the
+            // verified, unambiguous membership list.
+            var ruleAccessPoints = new HashSet<Guid>(godModeRule.RelatedAccessPoints);
+
+            var missingDoorGuids = new List<Guid>();
+            int scanned = 0;
+
+            foreach (Guid doorGuid in doorGuids)
+            {
+                Door door = Sdk.GetEntity(doorGuid) as Door;   // cached by the door query
+                if (door == null)
+                {
+                    MacroLogger.TraceWarning($"Door {doorGuid} vanished mid-run; skipping.");
+                    continue;
+                }
+                scanned++;
+
+                List<KeyValuePair<string, AccessPoint>> points = GetDoorAccessPoints(door);
+                if (points.Count == 0)
+                {
+                    MacroLogger.TraceWarning(
+                        $"Door '{door.Name}' ({doorGuid}) has no access points; skipping.");
+                    continue;
+                }
+
+                bool fullyInRule = true;
+                foreach (KeyValuePair<string, AccessPoint> ap in points)
+                {
+                    bool inRule = ruleAccessPoints.Contains(ap.Value.Guid);
+                    MacroLogger.TraceInformation(
+                        $"Door '{door.Name}' AP[{ap.Key}]={ap.Value.Guid} inRule={inRule}");
+                    if (!inRule) fullyInRule = false;
+                }
+
+                if (!fullyInRule)
+                {
+                    MacroLogger.TraceWarning(
+                        $"MISSING: door '{door.Name}' ({doorGuid}) is not fully in God Mode.");
+                    missingDoorGuids.Add(doorGuid);
+                    // Task 5: raise alarm here.
+                }
+            }
             // Auto-add (if enabled)    -> Task 6
             // Summary                  -> Task 7
             MacroLogger.TraceInformation("GodModeAccessLevelAudit.Execute() completed.");
@@ -112,6 +153,33 @@ public sealed class GodModeAccessLevelAudit : UserMacro
 
         MacroLogger.TraceInformation($"Enumerated {doorGuids.Count} door(s).");
         return doorGuids;
+    }
+
+    // Returns the AccessPoint objects on both sides of the door, each with a label,
+    // so the diagnostic log shows exactly what we are checking. The objects come from
+    // the cached Door graph, so no extra GetEntity calls are made.
+    private List<KeyValuePair<string, AccessPoint>> GetDoorAccessPoints(Door door)
+    {
+        var points = new List<KeyValuePair<string, AccessPoint>>();
+        AddSidePoints(points, "In", door.DoorSideIn);
+        AddSidePoints(points, "Out", door.DoorSideOut);
+        return points;
+    }
+
+    private void AddSidePoints(
+        List<KeyValuePair<string, AccessPoint>> points,
+        string sideLabel,
+        Door.DoorSide side)
+    {
+        if (side == null) return;
+        // Reader/Rex/EntrySensor are AccessPoint objects. Each may be null on a
+        // partially configured door. AccessPointSide is an enum and is NOT included.
+        if (side.Reader != null)
+            points.Add(new KeyValuePair<string, AccessPoint>(sideLabel + ":Reader", side.Reader));
+        if (side.Rex != null)
+            points.Add(new KeyValuePair<string, AccessPoint>(sideLabel + ":Rex", side.Rex));
+        if (side.EntrySensor != null)
+            points.Add(new KeyValuePair<string, AccessPoint>(sideLabel + ":EntrySensor", side.EntrySensor));
     }
 
     protected override void CleanUp()
