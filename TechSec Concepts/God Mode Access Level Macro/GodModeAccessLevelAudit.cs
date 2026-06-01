@@ -119,7 +119,21 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                     RaiseMissingDoorAlarm(door);
                 }
             }
-            // Auto-add (if enabled)    -> Task 6
+            if (EnableAutoAdd && missingDoorGuids.Count > 0)
+            {
+                MacroLogger.TraceInformation(
+                    $"Auto-add enabled. Adding {missingDoorGuids.Count} door(s).");
+                foreach (Guid doorGuid in missingDoorGuids)
+                {
+                    Door door = Sdk.GetEntity(doorGuid) as Door;
+                    if (door != null) AutoAddDoor(door, godModeRule);
+                }
+            }
+            else if (!EnableAutoAdd && missingDoorGuids.Count > 0)
+            {
+                MacroLogger.TraceInformation(
+                    "Auto-add disabled (report-only). No changes written.");
+            }
             // Summary                  -> Task 7
             MacroLogger.TraceInformation("GodModeAccessLevelAudit.Execute() completed.");
         }
@@ -197,6 +211,30 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         else
             MacroLogger.TraceInformation(
                 $"Raised alarm instance {instanceId} for door '{door.Name}'.");
+    }
+
+    private void AutoAddDoor(Door door, AccessRule rule)
+    {
+        try
+        {
+            List<KeyValuePair<string, AccessPoint>> points = GetDoorAccessPoints(door);
+            Sdk.TransactionManager.ExecuteTransaction(() =>
+            {
+                foreach (KeyValuePair<string, AccessPoint> ap in points)
+                {
+                    if (!ap.Value.AccessRules.Contains(rule))
+                        ap.Value.AccessRules.Add(rule);
+                }
+            });
+            MacroLogger.TraceInformation(
+                $"Auto-added door '{door.Name}' ({door.Guid}) to God Mode.");
+        }
+        catch (Exception ex)
+        {
+            MacroLogger.TraceError(ex,
+                $"Failed to auto-add door '{door.Name}' ({door.Guid}). " +
+                "Check macro-user write rights on this door's partition.");
+        }
     }
 
     protected override void CleanUp()
