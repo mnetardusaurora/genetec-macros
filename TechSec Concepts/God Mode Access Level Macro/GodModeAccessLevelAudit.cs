@@ -39,7 +39,42 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         MacroLogger.TraceInformation("GodModeAccessLevelAudit.Execute() started.");
         try
         {
-            // Parameter validation     -> Task 2
+            // --- Validate parameters ---
+            if (GodModeAccessRule.Equals(Guid.Empty))
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("GodModeAccessRule not set."),
+                    "GodModeAccessRule parameter is empty. Set it to the God Mode access rule.");
+                return;
+            }
+            if (MissingDoorAlarm.Equals(Guid.Empty))
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("MissingDoorAlarm not set."),
+                    "MissingDoorAlarm parameter is empty. Set it to the alarm to raise.");
+                return;
+            }
+
+            AccessRule godModeRule = Sdk.GetEntity(GodModeAccessRule) as AccessRule;
+            if (godModeRule == null)
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("God Mode rule not found."),
+                    $"No AccessRule found for GUID {GodModeAccessRule}. Was it deleted?");
+                return;
+            }
+
+            Alarm missingDoorAlarm = Sdk.GetEntity(MissingDoorAlarm) as Alarm;
+            if (missingDoorAlarm == null)
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("Alarm not found."),
+                    $"No Alarm found for GUID {MissingDoorAlarm}. Was it deleted?");
+                return;
+            }
+
+            MacroLogger.TraceInformation(
+                $"Auditing rule '{godModeRule.Name}'. EnableAutoAdd={EnableAutoAdd}.");
             // Enumerate all doors      -> Task 3
             // Check each door + alarm  -> Task 4 + Task 5
             // Auto-add (if enabled)    -> Task 6
