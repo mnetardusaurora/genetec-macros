@@ -139,11 +139,19 @@ The rule↔access-point link can be read from two ends: `AccessRule.RelatedAcces
 (the rule side) and `AccessPoint.AccessRules` (the access-point side, the only
 **writable** end). The SDK guide does **not** document whether these stay in sync —
 i.e., whether adding the rule via `AccessPoint.AccessRules.Add(rule)` makes that access
-point appear in `RelatedAccessPoints` (verified "not found in guide", 2026-06-01). To
-be safe regardless, the macro treats a door's access point as **covered if *either*
-end lists it**, and the per-missing-door log prints both signals
-(`ruleList=… apRules=…`). The lab run reveals which side Config Tool populates when a
-human adds a door, and confirms an auto-added door is not re-flagged on the next run.
+point appear in `RelatedAccessPoints` (verified "not found in guide", 2026-06-01).
+
+**The audit decision FAILS CLOSED on the rule side.** A door's access point counts as
+covered **only if it appears in `RelatedAccessPoints`** — the rule's own membership
+view. The access-point signal (`apRules`) is logged for diagnostics but never trusted
+for the verdict, because trusting the writable mirror could let a door that is not
+actually in the rule's effective membership pass the audit (a fail-open hole that would
+defeat the macro's purpose). Each missing-door log line prints both signals
+(`ruleList=… apRules=…`). Consequence: a door that was auto-added but does **not** show
+up on the rule side will keep alarming — which is correct, because it signals the write
+did not achieve rule membership. The lab run (Task 8) reveals which side Config Tool
+populates when a human adds a door and confirms whether `AccessRules.Add` actually
+updates `RelatedAccessPoints`; only then is auto-add trustworthy.
 
 ## 8. Deployment & processing impact
 

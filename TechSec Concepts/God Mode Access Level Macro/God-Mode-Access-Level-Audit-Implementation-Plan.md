@@ -684,10 +684,13 @@ After the build, the `macro-reviewer` gate and an extra guide lookup (R6) produc
 changes to the as-built `GodModeAccessLevelAudit.cs` that supersede the literal Task 3/4
 snippets above. The macro file is the source of truth for the final code.
 
-1. **Two-signal membership check (R6 / concept §7a).** The guide does not confirm that
-   `AccessRule.RelatedAccessPoints` and `AccessPoint.AccessRules` stay in sync. The
-   detection loop checks **both** ends (`inRuleList || inApRules`) so an auto-added door
-   is never re-alarmed, and logs both signals per missing access point.
+1. **Fail-closed membership check on the rule side (R6 / concept §7a).** The guide does
+   not confirm that `AccessRule.RelatedAccessPoints` and `AccessPoint.AccessRules` stay
+   in sync. The audit decision uses **only** the rule side (`inRuleList`) so it fails
+   closed — a door not listed by the rule is always flagged, never excused by the
+   writable mirror. Both signals (`ruleList=… apRules=…`) are logged per missing access
+   point for the §7a lab reconciliation. (An earlier draft used `inRuleList || inApRules`;
+   that was a fail-open regression for a security audit and was removed.)
 2. **Log volume trimmed to misses.** Per-access-point detail is logged only for doors
    flagged missing, keeping the log readable at scale.
 3. **Null-guard on the query cast.** `GetAllDoorGuids()` returns early with a logged

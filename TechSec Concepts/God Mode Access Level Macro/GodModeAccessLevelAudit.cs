@@ -106,16 +106,19 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 var apDetail = new List<string>();
                 foreach (KeyValuePair<string, AccessPoint> ap in points)
                 {
-                    // Check BOTH ends of the rule<->access-point relationship. The guide
-                    // does NOT confirm the two collections are kept in sync, so a door
-                    // counts as covered if EITHER end lists it. Auto-add writes the
-                    // AccessRules end, so checking it here prevents re-alarming a door we
-                    // just added even if RelatedAccessPoints does not reflect the change.
+                    // FAIL CLOSED: the audit decision uses ONLY the rule side
+                    // (RelatedAccessPoints) — "is this access point in the God Mode
+                    // rule's membership?". If the rule does not list it, the door is
+                    // treated as missing and alarmed. That is the entire point of the
+                    // audit. The apRules signal (the writable mirror) is logged for
+                    // diagnostics ONLY and is NOT trusted for the decision, because the
+                    // guide does not confirm the two collections stay in sync (§7a). A
+                    // door that was auto-added but still does not appear on the rule side
+                    // SHOULD keep alarming — that signals the write did not take effect.
                     bool inRuleList = ruleAccessPoints.Contains(ap.Value.Guid);
                     bool inApRules = ap.Value.AccessRules.Contains(godModeRule);
-                    bool covered = inRuleList || inApRules;
                     apDetail.Add($"{ap.Key}: ruleList={inRuleList} apRules={inApRules}");
-                    if (!covered)
+                    if (!inRuleList)
                     {
                         fullyInRule = false;
                     }
