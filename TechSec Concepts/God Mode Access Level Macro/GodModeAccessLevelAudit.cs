@@ -79,7 +79,7 @@ public sealed class GodModeAccessLevelAudit : UserMacro
             List<Guid> doorGuids = GetAllDoorGuids();
             // The rule's access points, captured once. RelatedAccessPoints is the
             // verified, unambiguous membership list.
-            var ruleAccessPoints = new HashSet<Guid>(godModeRule.RelatedAccessPoints);
+            HashSet<Guid> ruleAccessPoints = new HashSet<Guid>(godModeRule.RelatedAccessPoints);
 
             var missingDoorGuids = new List<Guid>();
             int scanned = 0;
@@ -103,18 +103,26 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 }
 
                 bool fullyInRule = true;
+                var apDetail = new List<string>();
                 foreach (KeyValuePair<string, AccessPoint> ap in points)
                 {
                     bool inRule = ruleAccessPoints.Contains(ap.Value.Guid);
-                    MacroLogger.TraceInformation(
-                        $"Door '{door.Name}' AP[{ap.Key}]={ap.Value.Guid} inRule={inRule}");
-                    if (!inRule) fullyInRule = false;
+                    apDetail.Add($"{ap.Key}={ap.Value.Guid} inRule={inRule}");
+                    if (!inRule)
+                    {
+                        fullyInRule = false;
+                    }
                 }
 
                 if (!fullyInRule)
                 {
+                    // Full per-access-point detail is logged only for missing doors,
+                    // so the log stays readable on large systems while still showing
+                    // exactly which access points are absent (used to reconcile which
+                    // access points define membership).
                     MacroLogger.TraceWarning(
-                        $"MISSING: door '{door.Name}' ({doorGuid}) is not fully in God Mode.");
+                        $"MISSING: door '{door.Name}' ({doorGuid}) not fully in God Mode. " +
+                        $"Access points: {string.Join("; ", apDetail)}");
                     missingDoorGuids.Add(doorGuid);
                     RaiseMissingDoorAlarm(door);
                 }
@@ -126,7 +134,10 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 foreach (Guid doorGuid in missingDoorGuids)
                 {
                     Door door = Sdk.GetEntity(doorGuid) as Door;
-                    if (door != null) AutoAddDoor(door, godModeRule);
+                    if (door != null)
+                    {
+                        AutoAddDoor(door, godModeRule);
+                    }
                 }
             }
             else if (!EnableAutoAdd && missingDoorGuids.Count > 0)
@@ -150,6 +161,13 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         var doorGuids = new List<Guid>();
         var query = Sdk.ReportManager.CreateReportQuery(ReportType.EntityConfiguration)
             as EntityConfigurationQuery;
+        if (query == null)
+        {
+            MacroLogger.TraceError(
+                new InvalidOperationException("EntityConfigurationQuery unavailable."),
+                "Could not create the door enumeration query.");
+            return doorGuids;
+        }
         query.EntityTypeFilter.Add(EntityType.Door);
 
         // Synchronous: blocks, returns results, and caches the doors. Run BEFORE any
