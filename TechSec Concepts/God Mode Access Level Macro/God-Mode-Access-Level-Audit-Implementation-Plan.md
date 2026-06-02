@@ -633,12 +633,14 @@ the only real execution test happens.
   doors are listed; one alarm per missing door shows in Alarm Monitoring with the door
   name; **no** config was changed.
 
-- [ ] **Step 3: Resolve R5 (§7).** In the lab, manually add one known door to the rule
-  in Config Tool. Re-run report-only. Compare the `inRule=true` access points for that
-  door against the labels logged. This reveals exactly which access points Config Tool
-  treats as membership (e.g. only `:Side`, or `:Side`+`:Reader`). If the macro is
-  checking points Config Tool does NOT use (or vice versa), narrow `GetDoorAccessPoints`
-  to the confirmed set and re-run. Record the finding in the concept doc §7.
+- [ ] **Step 3: Resolve R5 (§7) and R6 (§7a).** In the lab, manually add one known door
+  to the rule in Config Tool. Re-run report-only. Each missing-door log line now shows
+  both signals per access point: `ruleList=` (the rule's `RelatedAccessPoints`) and
+  `apRules=` (the access point's `AccessRules`). Note which signal(s) flipped to `true`
+  for the door you added — that reveals **which side Config Tool populates** and **which
+  access points** it uses (e.g. only `:Reader`, or `:Reader`+`:EntrySensor`). If the
+  macro checks points Config Tool does NOT use, narrow `GetDoorAccessPoints` to the
+  confirmed set. Record the finding in the concept doc §7 / §7a.
 
 - [ ] **Step 4: Lab — auto-add run.** Set `EnableAutoAdd = true` on a small test rule
   missing a couple of doors. Run. Confirm in Config Tool that the doors are now in the
@@ -673,3 +675,20 @@ the only real execution test happens.
   `GetDoorAccessPoints` (used in T4 and T6), `GetAllDoorGuids`, `missingDoorGuids` —
   names are consistent across tasks. T6 Step 2 flags the one scope decision
   (`godModeRule` local vs parameter) explicitly so it isn't left ambiguous.
+
+---
+
+## Post-implementation refinements (applied 2026-06-01)
+
+After the build, the `macro-reviewer` gate and an extra guide lookup (R6) produced three
+changes to the as-built `GodModeAccessLevelAudit.cs` that supersede the literal Task 3/4
+snippets above. The macro file is the source of truth for the final code.
+
+1. **Two-signal membership check (R6 / concept §7a).** The guide does not confirm that
+   `AccessRule.RelatedAccessPoints` and `AccessPoint.AccessRules` stay in sync. The
+   detection loop checks **both** ends (`inRuleList || inApRules`) so an auto-added door
+   is never re-alarmed, and logs both signals per missing access point.
+2. **Log volume trimmed to misses.** Per-access-point detail is logged only for doors
+   flagged missing, keeping the log readable at scale.
+3. **Null-guard on the query cast.** `GetAllDoorGuids()` returns early with a logged
+   error if `CreateReportQuery(...) as EntityConfigurationQuery` is null.
