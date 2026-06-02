@@ -183,16 +183,18 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         // Synchronous: blocks, returns results, and caches the doors. Run BEFORE any
         // transaction — Query() throws inside a transaction with pending updates.
         QueryCompletedEventArgs result = query.Query();
-        if (result != null && result.Success)
+        if (result == null || !result.Success || result.Data == null)
         {
-            foreach (DataRow row in result.Data.Rows)
-            {
-                doorGuids.Add((Guid)row["Guid"]);
-            }
+            // A security audit must never silently report "all clear" when it could
+            // not even read the doors. Throw so Execute()'s catch logs a clear failure
+            // instead of continuing to an empty, misleading "0 missing" summary.
+            throw new InvalidOperationException(
+                "Door enumeration query failed; cannot audit God Mode coverage this run.");
         }
-        else
+
+        foreach (DataRow row in result.Data.Rows)
         {
-            MacroLogger.TraceWarning("Door enumeration query did not succeed.");
+            doorGuids.Add((Guid)row["Guid"]);
         }
 
         MacroLogger.TraceInformation($"Enumerated {doorGuids.Count} door(s).");
