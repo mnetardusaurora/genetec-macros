@@ -106,9 +106,16 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 var apDetail = new List<string>();
                 foreach (KeyValuePair<string, AccessPoint> ap in points)
                 {
-                    bool inRule = ruleAccessPoints.Contains(ap.Value.Guid);
-                    apDetail.Add($"{ap.Key}={ap.Value.Guid} inRule={inRule}");
-                    if (!inRule)
+                    // Check BOTH ends of the rule<->access-point relationship. The guide
+                    // does NOT confirm the two collections are kept in sync, so a door
+                    // counts as covered if EITHER end lists it. Auto-add writes the
+                    // AccessRules end, so checking it here prevents re-alarming a door we
+                    // just added even if RelatedAccessPoints does not reflect the change.
+                    bool inRuleList = ruleAccessPoints.Contains(ap.Value.Guid);
+                    bool inApRules = ap.Value.AccessRules.Contains(godModeRule);
+                    bool covered = inRuleList || inApRules;
+                    apDetail.Add($"{ap.Key}: ruleList={inRuleList} apRules={inApRules}");
+                    if (!covered)
                     {
                         fullyInRule = false;
                     }
@@ -118,8 +125,8 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 {
                     // Full per-access-point detail is logged only for missing doors,
                     // so the log stays readable on large systems while still showing
-                    // exactly which access points are absent (used to reconcile which
-                    // access points define membership).
+                    // exactly which access points are absent and on which side (used to
+                    // reconcile which side defines membership during lab testing).
                     MacroLogger.TraceWarning(
                         $"MISSING: door '{door.Name}' ({doorGuid}) not fully in God Mode. " +
                         $"Access points: {string.Join("; ", apDetail)}");
