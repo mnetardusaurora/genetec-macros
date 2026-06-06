@@ -118,12 +118,19 @@ each `Guid` renders as an entity picker.
 | `SyncCredentials` | `bool` | false | Include Credential entities. |
 | `SyncDoors` | `bool` | false | Include Door entities. |
 | `SyncAreas` | `bool` | false | Include Area entities. |
-| `ReportOnly` | `bool` | **true** | When true, log what *would* be added; write nothing. Set false to actually add members. |
+| `Apply` | `bool` | **false** | **Safe by default.** Unticked = preview only: log what *would* be added, write nothing. Tick it to actually add members. |
 | `FailureAlarm` | `Guid` | empty | Optional. If set, raise this alarm once when the run fails. Empty = log-only. |
 
 **Design note:** one checkbox per type was chosen over a comma-separated string
 for a clear, typo-proof Config Tool UI. The supported set is small and stable;
 adding a new type is a deliberate code edit.
+
+**Why `Apply` and not `ReportOnly`:** a Config Tool `Boolean` always starts
+`false`. A `ReportOnly` flag would therefore be `false` (i.e. *writes enabled*)
+until an operator remembered to tick it — the first run would write, the opposite
+of safe-by-default. Inverting to `Apply` makes the zero-value the safe value: do
+nothing and the macro only previews. The operator must consciously tick `Apply`
+to make changes.
 
 ---
 
@@ -154,18 +161,21 @@ Execute():
                                                    # query failure -> THROW (fail loud)
         toAddByType[type] = [g for g in guids if g not in members]
 
-    # --- PHASE 2: write (skipped entirely when ReportOnly) ---
-    if ReportOnly:
+    # --- PHASE 2: write (skipped entirely unless Apply) ---
+    if not Apply:
         for type, list in toAddByType:  log "would add {count} {type}"
     else:
         ExecuteTransaction(() =>
             for type, list in toAddByType:
                 for guid in list:
                     pse = Sdk.GetEntity(guid) as PartitionSupportEntity
-                    if pse is null:  log warning (vanished), continue
-                    ok = pse.InsertIntoPartition(TargetPartition)
-                    if not ok:  count error, log warning
-                    else:       count added
+                    if pse is null:  log warning (vanished), count error, continue
+                    try:
+                        ok = pse.InsertIntoPartition(TargetPartition)
+                        if not ok:  count error, log warning
+                        else:       count added
+                    catch (addEx):                       # per-entity resilience (§8)
+                        count error, log warning         # one failure must not abort the rest
         )
 
     # --- summary ---
@@ -193,13 +203,17 @@ data (so a read failure never masquerades as "0 to add").
 - **Fail loud on read failure:** if any enumeration query fails, throw — never
   continue to a misleading "0 added" summary. A half-working sync recreates the
   exact "integration sees partial data" risk this macro exists to prevent.
-- **Report-only defaults true:** the first run in any environment is a no-op
-  preview. The operator flips it to false once the preview looks right.
+- **Safe by default (`Apply` unticked):** with no operator action the first run is
+  a no-op preview that writes nothing. The operator ticks `Apply` once the preview
+  looks right. (See §6 for why the flag is `Apply`, not `ReportOnly`.)
 - **Add-only guarantee:** the only mutating call is `InsertIntoPartition`. The
   macro never calls `MoveToPartition`, `RemoveMember`, or `RemoveFromPartition`,
   so it can never remove an entity from any partition.
-- **Per-entity resilience:** a `false` return or a per-entity exception is
-  counted and logged for that type; it does not abort the other types or the run.
+- **Per-entity resilience:** each `InsertIntoPartition` is wrapped in its own
+  `try`/`catch` *inside* the transaction. A `false` return OR a thrown
+  `SdkException` is counted and logged for that type; the catch keeps the
+  transaction valid so the successful adds still commit, and one entity's failure
+  does not abort the other types or the run.
 - **Skip-already-present:** entities already in `partition.Members` are skipped,
   so re-runs are cheap and don't fire redundant change events.
 
@@ -214,8 +228,8 @@ data (so a read failure never masquerades as "0 to add").
    the desired cadence (e.g. nightly, off-peak). The macro has no internal timer.
 3. **Optional alarm:** if `FailureAlarm` is used, pre-create an Alarm entity and
    select it in the parameter.
-4. **First run:** leave `ReportOnly = true`, run on demand, read the log summary,
-   confirm the "would add" counts look right, then set `ReportOnly = false`.
+4. **First run:** leave `Apply` unticked, run on demand, read the log summary,
+   confirm the "would add" counts look right, then tick `Apply` and run again.
 
 ---
 
@@ -231,16 +245,25 @@ data (so a read failure never masquerades as "0 to add").
 
 ---
 
-## 11. Open items to confirm during the build
+## 11. Open items — status after macro-reviewer pass (2026-06-06)
 
-1. **[VERIFY]** the exact `Sdk.GetEntity(guid) as Partition` cast compiles
-   (standard pattern; `Partition` is a confirmed `Entity` subclass).
-2. **[VERIFY]** all four target types derive from `PartitionSupportEntity` so the
-   `as PartitionSupportEntity` cast + `InsertIntoPartition` works for each
-   (Cardholder/Credential/Door/Area are all expected to; confirm Credential).
-3. Confirm the `EntityConfigurationQuery` result column for the GUID is `"Guid"`
-   (matches the God Mode macro's `row["Guid"]`).
-4. Decide README wording for the run-as scope caveat (failure mode in §10).
+1. ✅ **RESOLVED.** `Sdk.GetEntity(guid) as Partition` — `Partition` confirmed
+   (Ref p. 1206); standard cast pattern.
+2. ✅ **RESOLVED.** All four target types derive from `PartitionSupportEntity`:
+   `Cardholder` and `Credential` directly; `Door` and `Area` via
+   `AccessPointGroup : PartitionSupportEntity`. The `as PartitionSupportEntity`
+   cast is non-null for each, so the `AddMember` fallback is not needed.
+3. ✅ **RESOLVED.** GUID column is `"Guid"` — same as the working God Mode macro.
+   (Confirm once more in the lab run as cheap insurance.)
+4. ✅ **RESOLVED.** README documents the run-as scope caveat (§10) in Task 8.
+5. ⏳ **LAB CHECK (carried to the lab run).** Per-entity resilience now wraps each
+   `InsertIntoPartition` in a `try`/`catch` *inside* the single transaction. In
+   practice `ManagePartitionMemberships` is a partition-wide privilege, so the
+   "some succeed, some throw" case is unlikely (the user either has the right or
+   does not). Confirm in the lab that catching a per-entity `SdkException` inside
+   `ExecuteTransaction` leaves the transaction healthy enough to commit the
+   successful adds. If a single throw poisons the whole transaction, switch to a
+   per-entity `ExecuteTransaction` (the God Mode macro's `AutoAddDoor` precedent).
 
 ---
 
