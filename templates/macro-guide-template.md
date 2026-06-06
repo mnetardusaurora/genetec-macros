@@ -8,6 +8,7 @@
 | **Macro file** | `<ClassName>.cs` (in this folder) |
 | **Trigger** | <Scheduled | Event-driven | On-demand> |
 | **Category** | `<Macros subfolder>` |
+| **Visibility** | <Public or Restricted. Restricted macros are never published to the public catalog.> |
 | **Author** | Matthew Netardus |
 
 ## Intent

@@ -5,6 +5,7 @@
 //  Purpose         <full-sentence description of what it does>
 //  Trigger         <Scheduled | Event-driven | On-demand, with how it is run>
 //  Category        <Macros subfolder>
+//  Visibility      <Public | Restricted>
 //  Platform        Security Center 5.13 (also targets 5.12)
 //
 //  Reads           <entities and fields it reads>

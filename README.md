@@ -25,7 +25,8 @@ templates/                          the standards every macro follows
 - **A standard header** at the top of the `.cs` file. See `templates/macro-header.txt`.
 - **A standard guide** with a fixed set of sections, including a flowchart and an
   architecture-impact diagram. See `templates/macro-guide-template.md`.
-- **Human-written tone** in code and guides. No "e.g.", no em dashes, and nothing that reads as machine-generated.
+- **Human-written tone** in code and guides. No "e.g.", no em dashes, and nothing that reads as machine-generated. No company, customer, or site names.
+- **A visibility decision.** Every macro is marked Public or Restricted. Restricted macros are kept internal and are never published to the public catalog. Publishing is fail-closed: only macros marked Public are published.
 
 To bring an existing macro up to standard, follow `docs/conformance-checklist.md`.
 
