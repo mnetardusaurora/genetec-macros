@@ -81,6 +81,28 @@ public sealed class IntegrationPartitionSync : UserMacro
             MacroLogger.TraceInformation(
                 $"Syncing partition '{partition.Name}'. Types=[{string.Join(",", selectedTypes)}]. " +
                 $"ReportOnly={ReportOnly}.");
+
+            // Snapshot the partition's current members once. Members is a
+            // ReadOnlyCollection<Guid> (Ref Guide p. 1210). We diff against this
+            // so re-runs skip entities already present (no redundant writes/events).
+            HashSet<Guid> members = new HashSet<Guid>(partition.Members);
+
+            // PHASE 1: enumerate EVERYTHING before opening any transaction.
+            var toAddByType = new Dictionary<EntityType, List<Guid>>();
+            var scannedByType = new Dictionary<EntityType, int>();
+            foreach (EntityType type in selectedTypes)
+            {
+                List<Guid> all = EnumerateEntityGuids(type);
+                scannedByType[type] = all.Count;
+
+                var toAdd = new List<Guid>();
+                foreach (Guid guid in all)
+                {
+                    if (!members.Contains(guid))
+                        toAdd.Add(guid);
+                }
+                toAddByType[type] = toAdd;
+            }
         }
         catch (Exception ex)
         {
