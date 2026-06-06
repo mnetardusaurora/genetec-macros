@@ -154,6 +154,28 @@ public sealed class IntegrationPartitionSync : UserMacro
                     }
                 });
             }
+
+            // --- Per-type summary (the log IS the debugger for macros) ---
+            foreach (EntityType type in selectedTypes)
+            {
+                int scanned = scannedByType[type];
+                int toAdd = toAddByType[type].Count;
+                int alreadyPresent = scanned - toAdd;
+                if (ReportOnly)
+                {
+                    MacroLogger.TraceInformation(
+                        $"[{type}] scanned={scanned} alreadyPresent={alreadyPresent} " +
+                        $"wouldAdd={toAdd} (report-only, no writes).");
+                }
+                else
+                {
+                    MacroLogger.TraceInformation(
+                        $"[{type}] scanned={scanned} alreadyPresent={alreadyPresent} " +
+                        $"added={addedByType[type]} errors={errorsByType[type]}.");
+                }
+            }
+
+            MacroLogger.TraceInformation("IntegrationPartitionSync.Execute() completed.");
         }
         catch (Exception ex)
         {
