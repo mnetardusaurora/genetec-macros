@@ -1,22 +1,34 @@
-// IntegrationPartitionSync.cs
+// ----------------------------------------------------------------------------
+//  IntegrationPartitionSync.cs
+//  Add-only sync that keeps a chosen partition complete for selected entity types.
+// ----------------------------------------------------------------------------
+//  Purpose         Ensures every entity of the selected types (Cardholders,
+//                  Credentials, Doors, Areas) is a member of a chosen target
+//                  partition, so a partition-scoped integration never silently
+//                  misses entities. Never removes membership.
+//  Trigger         Scheduled (run by a Config Tool scheduled task). Also on demand.
+//  Category        Integrations
+//  Platform        Security Center 5.13 (also targets 5.12)
 //
-// Purpose:       Add-only sync that ensures every entity of the selected types
-//                (Cardholders, Credentials, Doors, Areas) is a MEMBER of a chosen
-//                target partition. Keeps a partition-scoped 3rd-party integration
-//                from silently missing entities. Never removes membership.
-// Trigger type:  Scheduled (run by a Config Tool scheduled task). Also on demand.
-// Required entities: one Partition (target). Optional: one Alarm (failure alarm).
-// Required custom fields: none.
-// Required parameters: TargetPartition (Guid); SyncCardholders, SyncCredentials,
-//                SyncDoors, SyncAreas (Boolean); Apply (Boolean, default false — safe: preview unless ticked);
-//                FailureAlarm (Guid, optional).
-// Required privilege: the macro run-as user needs ManagePartitionMemberships
-//                (or write access on the target partition), or every add throws.
-// Date created:  2026-06-06
+//  Reads           Entities of the selected types (enumerated by an
+//                  EntityConfigurationQuery), and the target partition's Members.
+//  Writes          Partition membership (adds only), and only when Apply is true.
+//                  One optional alarm instance when a run fails.
+//  Parameters      TargetPartition (Guid); SyncCardholders, SyncCredentials,
+//                  SyncDoors, SyncAreas (Boolean); Apply (Boolean, default false,
+//                  so the default is a safe preview); FailureAlarm (Guid, optional).
+//  Custom fields   none
+//  Privileges      The run-as user needs ManagePartitionMemberships, or write
+//                  access on the target partition, or every add fails.
 //
-// NOTE: InsertIntoPartition is ADD-ONLY and additive — an entity may belong to
-// multiple partitions at once, so adding to the target never removes it from any
-// other partition. This macro never calls MoveToPartition / RemoveMember.
+//  Author          Matthew Netardus
+//  Created         2026-06-06
+//  Guide           See README.md in this folder.
+// ----------------------------------------------------------------------------
+//
+//  Note: InsertIntoPartition is add-only and additive. An entity may belong to
+//  multiple partitions at once, so adding to the target never removes it from any
+//  other partition. This macro never calls MoveToPartition or RemoveMember.
 
 using System;
 using System.Collections.Generic;
@@ -133,15 +145,15 @@ public sealed class IntegrationPartitionSync : UserMacro
 
                         // ONE transaction per entity, with the catch OUTSIDE the lambda
                         // (God Mode AutoAddDoor precedent). A failure rolls back only this
-                        // entity and is counted as an error — the summary never reports an
+                        // entity and is counted as an error, so the summary never reports an
                         // add that actually rolled back. A single bulk transaction was
                         // rejected because catching a throw INSIDE the lambda does not
-                        // guarantee the remaining adds still commit (spec §8).
+                        // guarantee the remaining adds still commit (see the design notes).
                         try
                         {
                             Sdk.TransactionManager.ExecuteTransaction(() =>
                             {
-                                // ADD-ONLY: InsertIntoPartition is additive — it never
+                                // ADD-ONLY: InsertIntoPartition is additive. It never
                                 // removes the entity from any other partition. A false
                                 // return is turned into a throw so this transaction rolls
                                 // back and the entity is counted as an error, not an add.
@@ -153,13 +165,14 @@ public sealed class IntegrationPartitionSync : UserMacro
                         }
                         catch (System.Threading.ThreadAbortException)
                         {
-                            // The macro engine is stopping this macro — never swallow it.
+                            // The macro engine is stopping this macro, so never swallow it.
                             throw;
                         }
                         catch (Exception addEx)
                         {
-                            // Per-entity resilience (spec §8/§10): one entity's failure
-                            // (e.g. SdkException for missing rights) must not abort the rest.
+                            // Per-entity resilience (see the design notes): one entity's
+                            // failure, for example an SdkException for missing rights, must
+                            // not abort the rest.
                             errorsByType[type]++;
                             MacroLogger.TraceWarning(
                                 $"Failed to add {type} '{entity.Name}' ({guid}): {addEx.Message}. " +
@@ -179,7 +192,7 @@ public sealed class IntegrationPartitionSync : UserMacro
                 {
                     MacroLogger.TraceInformation(
                         $"[{type}] scanned={scanned} alreadyPresent={alreadyPresent} " +
-                        $"wouldAdd={toAdd} (preview, no writes — Apply not set).");
+                        $"wouldAdd={toAdd} (preview, no writes, Apply not set).");
                 }
                 else
                 {
@@ -216,8 +229,8 @@ public sealed class IntegrationPartitionSync : UserMacro
     // the entities so later GetEntity calls resolve from cache.
     //
     // FAIL LOUD: if the query cannot run or does not succeed, THROW. A security
-    // sync must never report "0 to add" when it could not even read the entities —
-    // that is exactly the "integration sees partial data" failure this macro
+    // sync must never report "0 to add" when it could not even read the entities.
+    // That is exactly the "integration sees partial data" failure this macro
     // exists to prevent. The throw is caught by Execute() and (optionally) alarmed.
     private List<Guid> EnumerateEntityGuids(EntityType type)
     {
@@ -232,7 +245,7 @@ public sealed class IntegrationPartitionSync : UserMacro
         query.EntityTypeFilter.Add(type);
 
         // Synchronous: blocks, returns results, caches the entities. Must run
-        // BEFORE any transaction — Query() throws inside a transaction with
+        // BEFORE any transaction. Query() throws inside a transaction with
         // pending updates (lesson from the God Mode macro).
         QueryCompletedEventArgs result = query.Query();
         if (result == null || !result.Success || result.Data == null)
@@ -255,7 +268,7 @@ public sealed class IntegrationPartitionSync : UserMacro
     private void RaiseFailureAlarm(Exception ex)
     {
         if (FailureAlarm.Equals(Guid.Empty))
-            return;  // optional — operator chose log-only
+            return;  // optional: operator chose log-only
 
         try
         {
