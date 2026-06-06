@@ -8,6 +8,7 @@
 //  Trigger         Scheduled (run daily by a Config Tool scheduled task). Also
 //                  runs on demand.
 //  Category        Access Levels
+//  Visibility      Restricted
 //  Platform        Security Center 5.13 (also targets 5.12)
 //
 //  Reads           Door entities (enumerated by an EntityConfigurationQuery), and

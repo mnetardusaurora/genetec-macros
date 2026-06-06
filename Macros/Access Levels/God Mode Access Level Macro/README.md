@@ -8,6 +8,7 @@ Checks, on a schedule, that every door in the system is included in a chosen acc
 | **Macro file** | `GodModeAccessLevelAudit.cs` (in this folder) |
 | **Trigger** | Scheduled (a Config Tool scheduled task). Also runs on demand. |
 | **Category** | `Access Levels` |
+| **Visibility** | Restricted (not published to the public catalog) |
 | **Author** | Matthew Netardus |
 
 ## Intent
