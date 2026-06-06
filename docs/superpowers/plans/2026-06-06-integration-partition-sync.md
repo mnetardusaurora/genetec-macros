@@ -2,6 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Post-review amendments (2026-06-06) — the shipped code differs from the task
+> blocks below in two ways; the design spec is the source of truth:**
+> 1. **`ReportOnly` → `Apply` (inverted).** A Config Tool Boolean starts `false`, so
+>    a `ReportOnly` flag would make the first run *write*. The shipped parameter is
+>    `Apply` (default false = preview only; tick to write). Read every `ReportOnly`
+>    below as `Apply` with inverted logic (`if (!ReportOnly)` → `if (Apply)`).
+> 2. **One transaction per entity, catch outside the lambda** (not one bulk
+>    transaction). Catching a throw *inside* a bulk `ExecuteTransaction` does not
+>    guarantee the remaining adds commit, which could make the summary report adds
+>    that rolled back. The shipped Phase 2 wraps each entity's `InsertIntoPartition`
+>    in its own `ExecuteTransaction` with the `try`/`catch` outside (God Mode
+>    `AutoAddDoor` precedent), turning a `false` return into a throw and rethrowing
+>    `ThreadAbortException`. See spec §7/§8 and the macro file for the final code.
+
 **Goal:** Build an add-only Genetec macro that ensures every entity of selected types (Cardholders, Credentials, Doors, Areas) is a member of a chosen target partition, so a partition-scoped 3rd-party integration never silently misses entities.
 
 **Architecture:** A single `UserMacro` (`IntegrationPartitionSync`) triggered by a Config Tool scheduled task. Each run: validate params → snapshot the partition's current members → enumerate all entities of each selected type (failing loud on any read error) → add the missing ones inside one transaction (or just preview them when `ReportOnly`) → write a per-type summary to the macro log → raise one optional alarm only if the run throws. It never removes membership.
