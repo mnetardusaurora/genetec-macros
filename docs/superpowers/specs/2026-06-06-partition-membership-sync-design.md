@@ -76,7 +76,7 @@ All confirmed from the guides in `Guide/` (text layer cached in
 | Multi-partition membership | An entity may belong to multiple partitions; `InsertIntoPartition` is additive and does **not** remove from others. `MoveToPartition` is the only "move" op and is **NOT used**. | **[VERIFIED — Ref Guide, `MoveToPartition` remarks; `Entity.GetPartitions` p. 1072]** |
 | Enumerate entities by type | `Sdk.ReportManager.CreateReportQuery(ReportType.EntityConfiguration) as EntityConfigurationQuery`, then `query.EntityTypeFilter.Add(EntityType.X)` | **[VERIFIED — Dev Guide]** |
 | Entity type enum values | `EntityType.Cardholder` (7), `EntityType.Credential` (9), `EntityType.Door` (11), `EntityType.Area` (5) | **[VERIFIED — Ref Guide p. 292]** |
-| Bulk write wrapper | `Sdk.TransactionManager.ExecuteTransaction(Action)` — recommended (not required) for many writes; auto rollback on exception | **[VERIFIED — Dev Guide p. 116]** |
+| Write wrapper | `Sdk.TransactionManager.ExecuteTransaction(Action)` — auto commit, auto rollback on exception. Used **per entity** (one add per transaction) so a failure rolls back only that entity. | **[VERIFIED — Dev Guide p. 116]** |
 | Required privilege | `SdkPrivilege.ManagePartitionMemberships` on the run-as user, or write access on the partition | **[VERIFIED — Ref Guide]** |
 
 **Gotchas captured for the build:**
@@ -165,18 +165,22 @@ Execute():
     if not Apply:
         for type, list in toAddByType:  log "would add {count} {type}"
     else:
-        ExecuteTransaction(() =>
-            for type, list in toAddByType:
-                for guid in list:
-                    pse = Sdk.GetEntity(guid) as PartitionSupportEntity
-                    if pse is null:  log warning (vanished), count error, continue
-                    try:
-                        ok = pse.InsertIntoPartition(TargetPartition)
-                        if not ok:  count error, log warning
-                        else:       count added
-                    catch (addEx):                       # per-entity resilience (§8)
-                        count error, log warning         # one failure must not abort the rest
-        )
+        for type, list in toAddByType:
+            for guid in list:
+                pse = Sdk.GetEntity(guid) as PartitionSupportEntity
+                if pse is null:  log warning (vanished), count error, continue
+                # ONE entity per transaction, catch OUTSIDE the lambda (God Mode
+                # AutoAddDoor precedent). A failure rolls back only this entity and
+                # is honestly counted as an error — never reported as added.
+                try:
+                    ExecuteTransaction(() =>
+                        if not pse.InsertIntoPartition(TargetPartition):
+                            throw  # force rollback so a false return counts as error
+                    )
+                    count added
+                catch (ThreadAbortException): rethrow      # engine stop — never swallow
+                catch (addEx):                             # per-entity resilience (§8)
+                    count error, log warning               # one failure must not abort the rest
 
     # --- summary ---
     for type:  log "scanned={n} alreadyPresent={p} added/would-add={a} errors={e}"
@@ -209,11 +213,16 @@ data (so a read failure never masquerades as "0 to add").
 - **Add-only guarantee:** the only mutating call is `InsertIntoPartition`. The
   macro never calls `MoveToPartition`, `RemoveMember`, or `RemoveFromPartition`,
   so it can never remove an entity from any partition.
-- **Per-entity resilience:** each `InsertIntoPartition` is wrapped in its own
-  `try`/`catch` *inside* the transaction. A `false` return OR a thrown
-  `SdkException` is counted and logged for that type; the catch keeps the
-  transaction valid so the successful adds still commit, and one entity's failure
-  does not abort the other types or the run.
+- **Per-entity resilience (truthful counts):** each entity is added in its **own**
+  `ExecuteTransaction`, with the `try`/`catch` **outside** the lambda — the God
+  Mode `AutoAddDoor` precedent. A `false` return is turned into a throw so it rolls
+  back and is counted as an error (never reported as added); a thrown `SdkException`
+  rolls back only that one entity and is counted/logged. Successful entities each
+  commit independently, so one failure cannot poison the batch or abort the run.
+  The catch rethrows `ThreadAbortException` so an engine stop is never swallowed.
+  (A single bulk transaction was rejected: catching a throw *inside* the lambda
+  does not guarantee the transaction still commits, which could make the summary
+  report adds that actually rolled back — unacceptable for a security sync.)
 - **Skip-already-present:** entities already in `partition.Members` are skipped,
   so re-runs are cheap and don't fire redundant change events.
 
@@ -256,14 +265,17 @@ data (so a read failure never masquerades as "0 to add").
 3. ✅ **RESOLVED.** GUID column is `"Guid"` — same as the working God Mode macro.
    (Confirm once more in the lab run as cheap insurance.)
 4. ✅ **RESOLVED.** README documents the run-as scope caveat (§10) in Task 8.
-5. ⏳ **LAB CHECK (carried to the lab run).** Per-entity resilience now wraps each
-   `InsertIntoPartition` in a `try`/`catch` *inside* the single transaction. In
-   practice `ManagePartitionMemberships` is a partition-wide privilege, so the
-   "some succeed, some throw" case is unlikely (the user either has the right or
-   does not). Confirm in the lab that catching a per-entity `SdkException` inside
-   `ExecuteTransaction` leaves the transaction healthy enough to commit the
-   successful adds. If a single throw poisons the whole transaction, switch to a
-   per-entity `ExecuteTransaction` (the God Mode macro's `AutoAddDoor` precedent).
+5. ✅ **RESOLVED (per-entity transaction).** Resilience now uses one
+   `ExecuteTransaction` **per entity** with the `try`/`catch` **outside** the
+   lambda (God Mode `AutoAddDoor` precedent), so a failed add rolls back only that
+   entity and is counted as an error — the summary never reports an add that
+   actually rolled back. The earlier "catch inside one bulk transaction" approach
+   was rejected as unverified.
+6. ⏳ **LAB CHECK.** Confirm first-apply runtime is acceptable at your scale
+   (per-entity transactions mean one commit per added entity; the bulk of a daily
+   run only adds *new* entities because already-present ones are skipped). If a
+   very large first apply is too slow, batch the adds, keeping each batch's
+   `try`/`catch` outside its `ExecuteTransaction`.
 
 ---
 
