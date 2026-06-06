@@ -93,12 +93,14 @@ All confirmed from the guides in `Guide/` (text layer cached in
 ## 5. Placement & files
 
 ```
-Macros/Integrations/Partition Membership Sync/
-  PartitionMembershipSync.cs   # the macro
-  README.md                    # operator setup: scheduled task, privileges, params
+Macros/Integrations/Integration Partition Sync/
+  IntegrationPartitionSync.cs   # the macro (class IntegrationPartitionSync)
+  README.md                     # operator setup: scheduled task, privileges, params
 ```
 
-`Macros/Integrations/` is a new sub-folder (the user requested it). The
+`Macros/Integrations/` is a new sub-folder (the user requested it). The macro
+entity is named **Integration Partition Sync**; the class is
+`IntegrationPartitionSync` and the file is `IntegrationPartitionSync.cs`. The
 README mirrors the God Mode macro's operator-facing README style.
 
 ---
@@ -170,7 +172,7 @@ Execute():
     for type:  log "scanned={n} alreadyPresent={p} added/would-add={a} errors={e}"
     log "completed"
   catch (ex):
-    MacroLogger.TraceError(ex, "PartitionMembershipSync.Execute() failed.")
+    MacroLogger.TraceError(ex, "IntegrationPartitionSync.Execute() failed.")
     if FailureAlarm is set:  RaiseFailureAlarm(ex.Message)
 
 CleanUp():
