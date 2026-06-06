@@ -112,60 +112,61 @@ public sealed class IntegrationPartitionSync : UserMacro
                 errorsByType[type] = 0;
             }
 
-            // PHASE 2: write. Skipped entirely in preview mode (no transaction opened).
+            // PHASE 2: write. Skipped entirely in preview mode (no writes at all).
             if (Apply)
             {
-                // One transaction for all adds: faster for bulk writes and rolls
-                // back automatically if it throws (Dev Guide p. 116). Entities were
-                // cached by the Phase 1 queries, so GetEntity here is a cache lookup.
-                Sdk.TransactionManager.ExecuteTransaction(() =>
+                foreach (EntityType type in selectedTypes)
                 {
-                    foreach (EntityType type in selectedTypes)
+                    foreach (Guid guid in toAddByType[type])
                     {
-                        foreach (Guid guid in toAddByType[type])
+                        // Entities were cached by the Phase 1 queries, so GetEntity
+                        // here is a cache lookup, not a Directory query.
+                        PartitionSupportEntity entity =
+                            Sdk.GetEntity(guid) as PartitionSupportEntity;
+                        if (entity == null)
                         {
-                            PartitionSupportEntity entity =
-                                Sdk.GetEntity(guid) as PartitionSupportEntity;
-                            if (entity == null)
-                            {
-                                MacroLogger.TraceWarning(
-                                    $"{type} {guid} vanished or is not partition-able; skipping.");
-                                errorsByType[type]++;
-                                continue;
-                            }
+                            MacroLogger.TraceWarning(
+                                $"{type} {guid} vanished or is not partition-able; skipping.");
+                            errorsByType[type]++;
+                            continue;
+                        }
 
-                            try
+                        // ONE transaction per entity, with the catch OUTSIDE the lambda
+                        // (God Mode AutoAddDoor precedent). A failure rolls back only this
+                        // entity and is counted as an error — the summary never reports an
+                        // add that actually rolled back. A single bulk transaction was
+                        // rejected because catching a throw INSIDE the lambda does not
+                        // guarantee the remaining adds still commit (spec §8).
+                        try
+                        {
+                            Sdk.TransactionManager.ExecuteTransaction(() =>
                             {
                                 // ADD-ONLY: InsertIntoPartition is additive — it never
-                                // removes the entity from any other partition.
-                                bool ok = entity.InsertIntoPartition(TargetPartition);
-                                if (ok)
-                                {
-                                    addedByType[type]++;
-                                }
-                                else
-                                {
-                                    errorsByType[type]++;
-                                    MacroLogger.TraceWarning(
-                                        $"InsertIntoPartition returned false for {type} '{entity.Name}' " +
-                                        $"({guid}). Check macro-user ManagePartitionMemberships rights " +
-                                        "on this partition.");
-                                }
-                            }
-                            catch (Exception addEx)
-                            {
-                                // Per-entity resilience (spec §8/§10): one entity's failure
-                                // (e.g. SdkException for missing rights) must not abort the
-                                // rest. Count it, log it, continue; the catch keeps the
-                                // transaction valid so the successful adds still commit.
-                                errorsByType[type]++;
-                                MacroLogger.TraceWarning(
-                                    $"InsertIntoPartition threw for {type} '{entity.Name}' ({guid}): " +
-                                    $"{addEx.Message}. Check macro-user ManagePartitionMemberships rights.");
-                            }
+                                // removes the entity from any other partition. A false
+                                // return is turned into a throw so this transaction rolls
+                                // back and the entity is counted as an error, not an add.
+                                if (!entity.InsertIntoPartition(TargetPartition))
+                                    throw new InvalidOperationException(
+                                        "InsertIntoPartition returned false (no write access?).");
+                            });
+                            addedByType[type]++;
+                        }
+                        catch (System.Threading.ThreadAbortException)
+                        {
+                            // The macro engine is stopping this macro — never swallow it.
+                            throw;
+                        }
+                        catch (Exception addEx)
+                        {
+                            // Per-entity resilience (spec §8/§10): one entity's failure
+                            // (e.g. SdkException for missing rights) must not abort the rest.
+                            errorsByType[type]++;
+                            MacroLogger.TraceWarning(
+                                $"Failed to add {type} '{entity.Name}' ({guid}): {addEx.Message}. " +
+                                "Check macro-user ManagePartitionMemberships rights on this partition.");
                         }
                     }
-                });
+                }
             }
 
             // --- Per-type summary (the log IS the debugger for macros) ---
@@ -178,7 +179,7 @@ public sealed class IntegrationPartitionSync : UserMacro
                 {
                     MacroLogger.TraceInformation(
                         $"[{type}] scanned={scanned} alreadyPresent={alreadyPresent} " +
-                        $"wouldAdd={toAdd} (report-only, no writes).");
+                        $"wouldAdd={toAdd} (preview, no writes — Apply not set).");
                 }
                 else
                 {
