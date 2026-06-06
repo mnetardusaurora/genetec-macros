@@ -103,6 +103,57 @@ public sealed class IntegrationPartitionSync : UserMacro
                 }
                 toAddByType[type] = toAdd;
             }
+
+            // Per-type counters initialised for both modes so the summary is uniform.
+            var addedByType = new Dictionary<EntityType, int>();
+            var errorsByType = new Dictionary<EntityType, int>();
+            foreach (EntityType type in selectedTypes)
+            {
+                addedByType[type] = 0;
+                errorsByType[type] = 0;
+            }
+
+            // PHASE 2: write. Skipped entirely in ReportOnly (no transaction opened).
+            if (!ReportOnly)
+            {
+                // One transaction for all adds: faster for bulk writes and rolls
+                // back automatically if it throws (Dev Guide p. 116). Entities were
+                // cached by the Phase 1 queries, so GetEntity here is a cache lookup.
+                Sdk.TransactionManager.ExecuteTransaction(() =>
+                {
+                    foreach (EntityType type in selectedTypes)
+                    {
+                        foreach (Guid guid in toAddByType[type])
+                        {
+                            PartitionSupportEntity entity =
+                                Sdk.GetEntity(guid) as PartitionSupportEntity;
+                            if (entity == null)
+                            {
+                                MacroLogger.TraceWarning(
+                                    $"{type} {guid} vanished or is not partition-able; skipping.");
+                                errorsByType[type]++;
+                                continue;
+                            }
+
+                            // ADD-ONLY: InsertIntoPartition is additive — it never
+                            // removes the entity from any other partition.
+                            bool ok = entity.InsertIntoPartition(TargetPartition);
+                            if (ok)
+                            {
+                                addedByType[type]++;
+                            }
+                            else
+                            {
+                                errorsByType[type]++;
+                                MacroLogger.TraceWarning(
+                                    $"InsertIntoPartition returned false for {type} '{entity.Name}' " +
+                                    $"({guid}). Check macro-user ManagePartitionMemberships rights " +
+                                    "on this partition.");
+                            }
+                        }
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
