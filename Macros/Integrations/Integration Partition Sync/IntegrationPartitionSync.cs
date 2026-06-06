@@ -52,13 +52,54 @@ public sealed class IntegrationPartitionSync : UserMacro
         MacroLogger.TraceInformation("IntegrationPartitionSync.Execute() started.");
         try
         {
-            // Body added in later tasks.
+            // --- Validate parameters ---
+            if (TargetPartition.Equals(Guid.Empty))
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("TargetPartition not set."),
+                    "TargetPartition parameter is empty. Set it to the partition to keep complete.");
+                return;
+            }
+
+            Partition partition = Sdk.GetEntity(TargetPartition) as Partition;
+            if (partition == null)
+            {
+                MacroLogger.TraceError(
+                    new ArgumentException("Partition not found."),
+                    $"No Partition found for GUID {TargetPartition}. Was it deleted?");
+                return;
+            }
+
+            List<EntityType> selectedTypes = BuildSelectedTypes();
+            if (selectedTypes.Count == 0)
+            {
+                MacroLogger.TraceWarning(
+                    "No entity types selected (all Sync* parameters false). Nothing to do.");
+                return;
+            }
+
+            MacroLogger.TraceInformation(
+                $"Syncing partition '{partition.Name}'. Types=[{string.Join(",", selectedTypes)}]. " +
+                $"ReportOnly={ReportOnly}.");
         }
         catch (Exception ex)
         {
             MacroLogger.TraceError(ex, "IntegrationPartitionSync.Execute() failed.");
             // RaiseFailureAlarm(ex) added in Task 7.
         }
+    }
+
+    // Translates the four checkbox parameters into the list of EntityType values
+    // to scan. EntityType enum values verified: Cardholder=7, Credential=9,
+    // Door=11, Area=5 (Ref Guide p. 292).
+    private List<EntityType> BuildSelectedTypes()
+    {
+        var types = new List<EntityType>();
+        if (SyncCardholders) types.Add(EntityType.Cardholder);
+        if (SyncCredentials) types.Add(EntityType.Credential);
+        if (SyncDoors) types.Add(EntityType.Door);
+        if (SyncAreas) types.Add(EntityType.Area);
+        return types;
     }
 
     protected override void CleanUp()
