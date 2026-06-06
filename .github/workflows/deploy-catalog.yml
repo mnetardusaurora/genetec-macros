@@ -1,0 +1,56 @@
+name: Deploy catalog to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "catalog/**"
+      - "Macros/**"
+      - ".github/workflows/deploy-catalog.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install -r catalog/requirements.txt
+
+      - name: Generate the public macro pages
+        run: python catalog/build_catalog.py
+
+      - name: Build the site
+        run: mkdocs build -f catalog/mkdocs.yml
+
+      - name: Upload the site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: catalog/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
