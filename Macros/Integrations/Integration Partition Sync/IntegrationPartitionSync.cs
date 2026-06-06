@@ -8,7 +8,7 @@
 // Required entities: one Partition (target). Optional: one Alarm (failure alarm).
 // Required custom fields: none.
 // Required parameters: TargetPartition (Guid); SyncCardholders, SyncCredentials,
-//                SyncDoors, SyncAreas (Boolean); ReportOnly (Boolean, default true);
+//                SyncDoors, SyncAreas (Boolean); Apply (Boolean, default false — safe: preview unless ticked);
 //                FailureAlarm (Guid, optional).
 // Required privilege: the macro run-as user needs ManagePartitionMemberships
 //                (or write access on the target partition), or every add throws.
@@ -38,11 +38,10 @@ public sealed class IntegrationPartitionSync : UserMacro
     public bool SyncDoors { get; set; }
     public bool SyncAreas { get; set; }
 
-    // Safe default: report-only. Logs what it WOULD add and writes nothing.
-    // The operator sets this false to actually add members. (Note: in Config Tool
-    // a Boolean defaults to false; the README instructs setting ReportOnly = true
-    // for the first run. See Task 8.)
-    public bool ReportOnly { get; set; }
+    // Safe by default. A Config Tool Boolean starts FALSE, so when the operator
+    // does nothing the macro PREVIEWS (logs what it would add) and writes nothing.
+    // The operator must consciously tick Apply to actually add members.
+    public bool Apply { get; set; }
 
     // Optional. If set, one alarm is raised when the run fails. Empty = log-only.
     public Guid FailureAlarm { get; set; }
@@ -80,7 +79,7 @@ public sealed class IntegrationPartitionSync : UserMacro
 
             MacroLogger.TraceInformation(
                 $"Syncing partition '{partition.Name}'. Types=[{string.Join(",", selectedTypes)}]. " +
-                $"ReportOnly={ReportOnly}.");
+                $"Apply={Apply}.");
 
             // Snapshot the partition's current members once. Members is a
             // ReadOnlyCollection<Guid> (Ref Guide p. 1210). We diff against this
@@ -113,8 +112,8 @@ public sealed class IntegrationPartitionSync : UserMacro
                 errorsByType[type] = 0;
             }
 
-            // PHASE 2: write. Skipped entirely in ReportOnly (no transaction opened).
-            if (!ReportOnly)
+            // PHASE 2: write. Skipped entirely in preview mode (no transaction opened).
+            if (Apply)
             {
                 // One transaction for all adds: faster for bulk writes and rolls
                 // back automatically if it throws (Dev Guide p. 116). Entities were
@@ -161,7 +160,7 @@ public sealed class IntegrationPartitionSync : UserMacro
                 int scanned = scannedByType[type];
                 int toAdd = toAddByType[type].Count;
                 int alreadyPresent = scanned - toAdd;
-                if (ReportOnly)
+                if (!Apply)
                 {
                     MacroLogger.TraceInformation(
                         $"[{type}] scanned={scanned} alreadyPresent={alreadyPresent} " +
