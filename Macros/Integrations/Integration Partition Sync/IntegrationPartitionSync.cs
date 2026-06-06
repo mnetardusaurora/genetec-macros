@@ -134,20 +134,34 @@ public sealed class IntegrationPartitionSync : UserMacro
                                 continue;
                             }
 
-                            // ADD-ONLY: InsertIntoPartition is additive — it never
-                            // removes the entity from any other partition.
-                            bool ok = entity.InsertIntoPartition(TargetPartition);
-                            if (ok)
+                            try
                             {
-                                addedByType[type]++;
+                                // ADD-ONLY: InsertIntoPartition is additive — it never
+                                // removes the entity from any other partition.
+                                bool ok = entity.InsertIntoPartition(TargetPartition);
+                                if (ok)
+                                {
+                                    addedByType[type]++;
+                                }
+                                else
+                                {
+                                    errorsByType[type]++;
+                                    MacroLogger.TraceWarning(
+                                        $"InsertIntoPartition returned false for {type} '{entity.Name}' " +
+                                        $"({guid}). Check macro-user ManagePartitionMemberships rights " +
+                                        "on this partition.");
+                                }
                             }
-                            else
+                            catch (Exception addEx)
                             {
+                                // Per-entity resilience (spec §8/§10): one entity's failure
+                                // (e.g. SdkException for missing rights) must not abort the
+                                // rest. Count it, log it, continue; the catch keeps the
+                                // transaction valid so the successful adds still commit.
                                 errorsByType[type]++;
                                 MacroLogger.TraceWarning(
-                                    $"InsertIntoPartition returned false for {type} '{entity.Name}' " +
-                                    $"({guid}). Check macro-user ManagePartitionMemberships rights " +
-                                    "on this partition.");
+                                    $"InsertIntoPartition threw for {type} '{entity.Name}' ({guid}): " +
+                                    $"{addEx.Message}. Check macro-user ManagePartitionMemberships rights.");
                             }
                         }
                     }
