@@ -180,7 +180,7 @@ public sealed class IntegrationPartitionSync : UserMacro
         catch (Exception ex)
         {
             MacroLogger.TraceError(ex, "IntegrationPartitionSync.Execute() failed.");
-            // RaiseFailureAlarm(ex) added in Task 7.
+            RaiseFailureAlarm(ex);
         }
     }
 
@@ -234,6 +234,35 @@ public sealed class IntegrationPartitionSync : UserMacro
 
         MacroLogger.TraceInformation($"Enumerated {guids.Count} {type} entity(ies).");
         return guids;
+    }
+
+    // Optional: raise ONE alarm when a run fails. No-op when FailureAlarm is empty
+    // (log-only mode). Mirrors the God Mode macro's alarm pattern.
+    private void RaiseFailureAlarm(Exception ex)
+    {
+        if (FailureAlarm.Equals(Guid.Empty))
+            return;  // optional — operator chose log-only
+
+        try
+        {
+            var content = new DynamicAlarmContent(
+                $"Integration Partition Sync failed: {ex.Message}");
+            content.AttachedEntities.Add(TargetPartition);
+
+            int instanceId = Sdk.AlarmManager.TriggerAlarm(
+                FailureAlarm, TargetPartition, content);
+
+            if (instanceId == -1)
+                MacroLogger.TraceWarning("Failure alarm TriggerAlarm returned -1.");
+            else
+                MacroLogger.TraceInformation(
+                    $"Raised failure alarm instance {instanceId}.");
+        }
+        catch (Exception alarmEx)
+        {
+            // Never let alarm-raising mask the original failure.
+            MacroLogger.TraceError(alarmEx, "Failed to raise the failure alarm.");
+        }
     }
 
     protected override void CleanUp()
