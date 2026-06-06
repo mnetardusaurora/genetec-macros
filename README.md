@@ -25,7 +25,7 @@ templates/                          the standards every macro follows
 - **A standard header** at the top of the `.cs` file. See `templates/macro-header.txt`.
 - **A standard guide** with a fixed set of sections, including a flowchart and an
   architecture-impact diagram. See `templates/macro-guide-template.md`.
-- **Human-written tone** in code and guides. No "e.g.", no em dashes, no AI references.
+- **Human-written tone** in code and guides. No "e.g.", no em dashes, and nothing that reads as machine-generated.
 
 To bring an existing macro up to standard, follow `docs/conformance-checklist.md`.
 
