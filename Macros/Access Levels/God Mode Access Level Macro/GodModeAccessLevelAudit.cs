@@ -1,19 +1,33 @@
-// GodModeAccessLevelAudit.cs
+// ----------------------------------------------------------------------------
+//  GodModeAccessLevelAudit.cs
+//  Daily check that every door is present in a chosen "God Mode" access rule.
+// ----------------------------------------------------------------------------
+//  Purpose         Audits that every Door belongs to the selected God Mode access
+//                  rule. Raises one alarm per missing door, and when EnableAutoAdd
+//                  is true, adds the missing door's access points to the rule.
+//  Trigger         Scheduled (run daily by a Config Tool scheduled task). Also
+//                  runs on demand.
+//  Category        Access Levels
+//  Platform        Security Center 5.13 (also targets 5.12)
 //
-// Purpose:       Daily audit that every Door is present in a chosen "God Mode"
-//                access rule. Raises one alarm per missing door, and (when
-//                EnableAutoAdd is true) adds the missing door's access points
-//                to the rule.
-// Trigger type:  Scheduled (run daily by a Config Tool scheduled task). Also
-//                runs on demand.
-// Required entities: one Access Rule ("God Mode"), one Alarm. Both pre-existing.
-// Required custom fields: none.
-// Required parameters: GodModeAccessRule (Guid), MissingDoorAlarm (Guid),
-//                EnableAutoAdd (Boolean, default false).
-// Date created:  2026-05-31
+//  Reads           Door entities (enumerated by an EntityConfigurationQuery), and
+//                  the access rule's RelatedAccessPoints membership.
+//  Writes          One alarm instance per missing door. Access-rule membership
+//                  only when EnableAutoAdd is true.
+//  Parameters      GodModeAccessRule (Guid), MissingDoorAlarm (Guid),
+//                  EnableAutoAdd (Boolean, default false).
+//  Custom fields   none
+//  Privileges      Write access on the access rule's partition, only when
+//                  EnableAutoAdd is true.
 //
-// NOTE: "Access level" in Security Center is modeled by the AccessRule entity.
-// Rule membership is a list of ACCESS POINT GUIDs, not doors. See the concept doc.
+//  Author          Matthew Netardus
+//  Created         2026-05-31
+//  Guide           See README.md in this folder.
+// ----------------------------------------------------------------------------
+//
+//  Note: "Access level" in Security Center is modeled by the AccessRule entity.
+//  Rule membership is a list of access point GUIDs, not whole doors. The
+//  development notes in this folder explain the reasoning.
 
 using System;
 using System.Collections.Generic;
@@ -107,14 +121,15 @@ public sealed class GodModeAccessLevelAudit : UserMacro
                 foreach (KeyValuePair<string, AccessPoint> ap in points)
                 {
                     // FAIL CLOSED: the audit decision uses ONLY the rule side
-                    // (RelatedAccessPoints) — "is this access point in the God Mode
-                    // rule's membership?". If the rule does not list it, the door is
-                    // treated as missing and alarmed. That is the entire point of the
-                    // audit. The apRules signal (the writable mirror) is logged for
-                    // diagnostics ONLY and is NOT trusted for the decision, because the
-                    // guide does not confirm the two collections stay in sync (§7a). A
-                    // door that was auto-added but still does not appear on the rule side
-                    // SHOULD keep alarming — that signals the write did not take effect.
+                    // (RelatedAccessPoints). The question is whether each access point
+                    // appears in the God Mode rule's membership. If the rule does not
+                    // list it, the door is treated as missing and alarmed. That is the
+                    // entire point of the audit. The apRules signal (the writable mirror)
+                    // is logged for diagnostics ONLY and is NOT trusted for the decision,
+                    // because the guide does not confirm the two collections stay in sync
+                    // (see the development notes). A door that was auto-added but still
+                    // does not appear on the rule side SHOULD keep alarming, which signals
+                    // the write did not take effect.
                     bool inRuleList = ruleAccessPoints.Contains(ap.Value.Guid);
                     bool inApRules = ap.Value.AccessRules.Contains(godModeRule);
                     apDetail.Add($"{ap.Key}: ruleList={inRuleList} apRules={inApRules}");
@@ -181,7 +196,7 @@ public sealed class GodModeAccessLevelAudit : UserMacro
         query.EntityTypeFilter.Add(EntityType.Door);
 
         // Synchronous: blocks, returns results, and caches the doors. Run BEFORE any
-        // transaction — Query() throws inside a transaction with pending updates.
+        // transaction. Query() throws inside a transaction with pending updates.
         QueryCompletedEventArgs result = query.Query();
         if (result == null || !result.Success || result.Data == null)
         {
