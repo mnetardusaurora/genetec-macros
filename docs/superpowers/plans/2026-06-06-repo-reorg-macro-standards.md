@@ -49,7 +49,7 @@ Write `templates/macro-header.txt` with exactly this content:
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 test -f templates/macro-header.txt && echo "exists"
 grep -nP '\x{2014}|\x{2013}|\be\.g\.|\bi\.e\.|\betc\.' templates/macro-header.txt && echo "VIOLATION" || echo "tone clean"
 ```
@@ -58,7 +58,7 @@ Expected: `exists` then `tone clean`.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git add templates/macro-header.txt
 git commit -m "feat: add standard macro header template"
 ```
@@ -177,7 +177,7 @@ flowchart LR
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 test -f templates/macro-guide-template.md && echo "exists"
 grep -nP '\x{2014}|\x{2013}|\be\.g\.|\bi\.e\.|\betc\.' templates/macro-guide-template.md && echo "VIOLATION" || echo "tone clean"
 ```
@@ -186,7 +186,7 @@ Expected: `exists` then `tone clean`.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git add templates/macro-guide-template.md
 git commit -m "feat: add standard macro guide template"
 ```
@@ -252,7 +252,7 @@ Expected: no output.
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 test -f docs/conformance-checklist.md && echo "exists"
 grep -nP '\x{2014}|\x{2013}' docs/conformance-checklist.md && echo "DASH VIOLATION" || echo "dash clean"
 ```
@@ -261,7 +261,7 @@ Expected: `exists` then `dash clean`. This file is an internal checklist, not a 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git add docs/conformance-checklist.md
 git commit -m "docs: add per-macro conformance checklist"
 ```
@@ -326,7 +326,7 @@ whether it is event-driven or scheduled. The scaffold then creates the folder, t
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 grep -nP '\x{2014}|\x{2013}|\be\.g\.|\bi\.e\.|\betc\.' README.md && echo "VIOLATION" || echo "tone clean"
 head -1 README.md
 ```
@@ -335,7 +335,7 @@ Expected: `tone clean` then `# Genetec Security Center Macros`.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git add README.md
 git commit -m "docs: describe repo layout and macro standards in README"
 ```
@@ -402,7 +402,7 @@ Follow `docs/conformance-checklist.md`.
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git check-ignore CLAUDE.md && echo "ignored as expected"
 git status --short | grep -i 'CLAUDE.md' && echo "UNEXPECTEDLY TRACKED" || echo "not in git status, correct"
 ```
@@ -465,7 +465,7 @@ Add a rule: the generated `.cs` and `README.md` must follow the human-written to
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git check-ignore .claude/skills/new-macro/SKILL.md && echo "ignored as expected"
 git status --short | grep -i 'new-macro' && echo "UNEXPECTEDLY TRACKED" || echo "not in git status, correct"
 ```
@@ -483,7 +483,7 @@ This file is intentionally not committed.
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git ls-files | grep -E '^templates/|^docs/|^README.md'
 ```
 Expected to include: `README.md`, `templates/macro-header.txt`,
@@ -495,7 +495,7 @@ Expected to include: `README.md`, `templates/macro-header.txt`,
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 git ls-files | grep -E '^\.claude/|^CLAUDE\.md|^Guide/' && echo "FORBIDDEN TRACKED" || echo "clean: no forbidden paths tracked"
 ```
 Expected: `clean: no forbidden paths tracked`.
@@ -504,7 +504,7 @@ Expected: `clean: no forbidden paths tracked`.
 
 Run:
 ```bash
-cd "/home/mnetardus/Anduril/Genetec Macros"
+cd "$(git rev-parse --show-toplevel)"
 grep -rnP '\x{2014}|\x{2013}' templates/ README.md docs/conformance-checklist.md && echo "DASH VIOLATION" || echo "no stray dashes"
 ```
 Expected: `no stray dashes`.
