@@ -102,6 +102,45 @@ public sealed class IntegrationPartitionSync : UserMacro
         return types;
     }
 
+    // Returns the GUIDs of every entity of the given type. Mirrors the God Mode
+    // macro's enumeration: synchronous EntityConfigurationQuery that also caches
+    // the entities so later GetEntity calls resolve from cache.
+    //
+    // FAIL LOUD: if the query cannot run or does not succeed, THROW. A security
+    // sync must never report "0 to add" when it could not even read the entities —
+    // that is exactly the "integration sees partial data" failure this macro
+    // exists to prevent. The throw is caught by Execute() and (optionally) alarmed.
+    private List<Guid> EnumerateEntityGuids(EntityType type)
+    {
+        var guids = new List<Guid>();
+        var query = Sdk.ReportManager.CreateReportQuery(ReportType.EntityConfiguration)
+            as EntityConfigurationQuery;
+        if (query == null)
+        {
+            throw new InvalidOperationException(
+                $"Could not create EntityConfigurationQuery for {type}.");
+        }
+        query.EntityTypeFilter.Add(type);
+
+        // Synchronous: blocks, returns results, caches the entities. Must run
+        // BEFORE any transaction — Query() throws inside a transaction with
+        // pending updates (lesson from the God Mode macro).
+        QueryCompletedEventArgs result = query.Query();
+        if (result == null || !result.Success || result.Data == null)
+        {
+            throw new InvalidOperationException(
+                $"Entity enumeration query failed for {type}; aborting sync this run.");
+        }
+
+        foreach (DataRow row in result.Data.Rows)
+        {
+            guids.Add((Guid)row["Guid"]);
+        }
+
+        MacroLogger.TraceInformation($"Enumerated {guids.Count} {type} entity(ies).");
+        return guids;
+    }
+
     protected override void CleanUp()
     {
         // No persistent resources or event subscriptions to release.
