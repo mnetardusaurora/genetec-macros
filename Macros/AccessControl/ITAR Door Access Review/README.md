@@ -14,7 +14,7 @@ you turn report-only mode off.
 | Platform | Security Center 5.13 (also targets 5.12) |
 | Macro file | `ItarDoorAccessReview.cs` (in this folder) |
 | Trigger | A Config Tool **Scheduled task** (see *Scheduling* below) |
-| Visibility | **Public** (catalog eligible only after security and IP review) |
+| **Visibility** | Public (security and IP review completed 2026-06-06) |
 | Modifies anything? | **No.** Read only. Raises the chosen alarm when live. |
 | Compliance relevance | **ITAR (22 CFR 120-130).** ISSM review required before live alarms. |
 
