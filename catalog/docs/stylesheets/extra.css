@@ -1,0 +1,38 @@
+/* Custom theme for the macro catalog.
+
+   This is a dark, technical look built from neutral values chosen here. It is
+   not a copy of any company's brand assets. If you have brand-approved colors
+   and a licensed font you are cleared to use, replace the values below. */
+
+/* A tight grotesque for headings gives a technical feel. Space Grotesk is a
+   free, open-licensed typeface loaded from Google Fonts. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
+
+/* Dark scheme palette. */
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0e1013;
+  --md-default-fg-color: #e6e8eb;
+  --md-default-fg-color--light: #b7bcc2;
+  --md-default-fg-color--lighter: #8b9197;
+  --md-primary-fg-color: #0b0d10;
+  --md-primary-bg-color: #f2f4f6;
+  --md-accent-fg-color: #9fb3c8;
+  --md-typeset-a-color: #9fb3c8;
+  --md-code-bg-color: #15181c;
+}
+
+/* Headings and the site title in the grotesque face. */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-header__title,
+.md-nav__title {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+/* A thin rule under the header for a squared, technical edge. */
+.md-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}

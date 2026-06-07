@@ -1,20 +1,17 @@
 # Genetec Security Center Macros
 
-I build and run Genetec Security Center macros in the field, and this is where I share the ones that are general enough to help other security teams. Each macro solves a specific, recurring problem in access control and physical security, and each comes with a plain-language guide.
+I write macros for Genetec Security Center as part of my day job, and a handful of them turned out to be general enough to be worth sharing. They live here.
 
-## What these are
+Every one of them started as a real problem on a real system. A door nobody remembered to add to the master access rule. A partition an integration could only half see. The sort of thing you tend to find at the worst possible moment. These macros close those gaps and keep them closed.
 
-A macro here is a single C# file that you paste into a Macro entity in the Genetec Config Tool. Security Center compiles it at runtime. There is no installer and no build step. Every macro page explains what the macro does, every piece of data it touches, how it can fail, and the risks to weigh before you run it.
+## Using one
 
-## How to use one
+A macro here is a single C# file. Open its page, read it, then paste the file into a Macro entity in the Genetec Config Tool. Security Center compiles it when you apply, so there is nothing to install.
 
-1. Open the macro's page and read the guide end to end, especially the failure modes and risks.
-2. Copy the macro file into a new Macro entity in Config Tool.
-3. Set the parameters the guide lists.
-4. Test it in a lab or staging system before you point it at production. These macros act on live access control, so a careful first run matters.
+Read the whole page before you run anything. The failure modes and risks sections are there because these macros act on live access control. Always try one in a lab system first.
 
-## A note on safety
+## Make them your own
 
-These are tools, not turnkey products. Read each guide, understand what the macro writes, and confirm the behavior in a non-production system first. Where a macro can change live configuration, its guide says so and explains how to roll back.
+I wrote these for my environments, and yours will be different. Most pages have a customizing section near the bottom that points you at what to change, like how many partitions a mapping covers or which entity types get synced. Take a macro, adjust it, and make it fit your system.
 
-Browse the [macros](macros/index.md), or read more [about me](about.md).
+Have a look at the [macros](macros/index.md), or read a bit [about me](about.md).

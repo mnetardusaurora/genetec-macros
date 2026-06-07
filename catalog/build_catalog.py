@@ -52,6 +52,21 @@ def visibility_of(markdown_text):
     return "unmarked"
 
 
+def without_visibility_row(markdown_text):
+    """Return the guide text with the Visibility table row removed.
+
+    The Visibility marker decides whether a macro is published, but a reader of
+    the public page does not need to see it, so it is stripped from the copy
+    that ships.
+    """
+    kept = [
+        line
+        for line in markdown_text.splitlines(keepends=True)
+        if not re.match(r"\s*\|\s*\*\*Visibility\*\*\s*\|", line)
+    ]
+    return "".join(kept)
+
+
 def main():
     # Start from a clean output folder so a macro that flips back to Restricted
     # cannot leave a stale published page behind.
@@ -78,7 +93,8 @@ def main():
         macro_slug = slugify(macro_dir.name)
         target_dir = OUTPUT_DIR / category_slug
         target_dir.mkdir(parents=True, exist_ok=True)
-        (target_dir / (macro_slug + ".md")).write_text(text, encoding="utf-8")
+        (target_dir / (macro_slug + ".md")).write_text(
+            without_visibility_row(text), encoding="utf-8")
         published.append((category, title))
 
     write_index(published)

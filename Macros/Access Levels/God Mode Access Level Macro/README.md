@@ -137,3 +137,11 @@ No custom fields are required.
 | Alarm raised | `Raised alarm instance` |
 | Auto-add result | `Auto-added door` / `Failed to auto-add door` |
 | Run failed | `Execute() failed.` |
+
+## Customizing for your environment
+
+This macro is a starting point, not a finished product. The changes people make most often:
+
+- **Audit a different rule.** Point `GodModeAccessRule` at whichever access rule should contain every door. Nothing in the code is tied to one rule.
+- **Turn on auto-add once you trust it.** Leave `EnableAutoAdd` off while you read the reports. Set it true when the missing-door list looks right, and the macro adds the access points for you.
+- **Audit more than one rule.** The simplest way is to create a second Macro entity from the same file and point it at the other rule. If you would rather one run cover several rules, change `GodModeAccessRule` from a single parameter into a short list and loop over it in `Execute()`.

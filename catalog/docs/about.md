@@ -1,15 +1,11 @@
 # About
 
-I am Matthew Netardus. I have spent my career in physical security and access control, working across engineering, product, and technical architecture.
+I am Matthew Netardus. I have spent my career in physical security, most of it close to access control and the software that runs it.
 
-I served as Director of Engineering and Programming at Security 101, then as Director of Product at Hanwha Vision, and I am currently Senior Manager of Technical Security Architecture at Anduril.
+I was Director of Engineering and Programming at Security 101, then Director of Product at Hanwha Vision, and I am now Senior Manager of Technical Security Architecture at Anduril.
 
-## Why this site exists
-
-Across those roles I kept running into the same gaps in day-to-day security operations, the kind that a small, well-built macro can close. I share the ones that are general enough to help other teams, written to a consistent standard so each is easy to read, reason about, and trust before you run it.
-
-If a macro here saves another security department a late night, it has done its job.
+Somewhere along the way I got tired of fixing the same small problems by hand, so I started writing macros for them. The ones that hold up outside my own systems end up here. If one of them saves your team a bad night, that was the point.
 
 ## Get in touch
 
-<!-- Add your preferred contact and profile links here, for example a LinkedIn URL or an email address. -->
+Email me at <mnetardus@auroranexus.ai>, or connect on [LinkedIn](https://www.linkedin.com/in/matthewnetardus).
