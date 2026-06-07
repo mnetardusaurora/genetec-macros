@@ -8,4 +8,4 @@ Somewhere along the way I got tired of fixing the same small problems by hand, s
 
 ## Get in touch
 
-Email me at <mnetardus@auroranexus.ai>, or connect on [LinkedIn](LINKEDIN_URL_HERE).
+Email me at <mnetardus@auroranexus.ai>, or connect on [LinkedIn](https://www.linkedin.com/in/matthewnetardus).
