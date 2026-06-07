@@ -8,7 +8,7 @@ Keeps a partition complete for selected entity types, so a third-party integrati
 | **Macro file** | `IntegrationPartitionSync.cs` (in this folder) |
 | **Trigger** | Scheduled (a Config Tool scheduled task). Also runs on demand. |
 | **Category** | `Integrations` |
-| **Visibility** | Restricted (not published to the public catalog) |
+| **Visibility** | Public (security and IP review completed 2026-06-06) |
 | **Author** | Matthew Netardus |
 
 ## Intent
