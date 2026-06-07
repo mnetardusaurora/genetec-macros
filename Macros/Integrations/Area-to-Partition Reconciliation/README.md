@@ -8,7 +8,7 @@ An add-only scheduled macro that keeps each mapped partition complete for every 
 | **Macro file** | `AreaToPartitionReconciliation.cs` (in this folder) |
 | **Trigger** | Scheduled |
 | **Category** | `Integrations` |
-| **Visibility** | Public (security and IP review required before catalog publish) |
+| **Visibility** | Public (security and IP review completed 2026-06-06) |
 | **Author** | Matthew Netardus |
 
 ## Intent
