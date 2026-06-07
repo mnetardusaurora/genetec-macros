@@ -6,23 +6,29 @@ site_author: Matthew Netardus
 docs_dir: docs
 site_dir: site
 
+copyright: Aurora Nexus&trade; 2026
+
 theme:
   name: material
+  icon:
+    logo: material/shield-lock-outline
+  font:
+    text: Inter
+    code: JetBrains Mono
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: blue grey
-      accent: indigo
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: blue grey
-      accent: indigo
+    # Dark is the default, in keeping with the technical look.
+    - scheme: slate
+      primary: black
+      accent: grey
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: grey
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
   features:
     - navigation.top
     - navigation.sections
@@ -30,6 +36,13 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+
+extra:
+  # Removes the "Made with Material for MkDocs" line from the footer.
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
