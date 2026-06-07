@@ -8,7 +8,7 @@
 //                  misses entities. Never removes membership.
 //  Trigger         Scheduled (run by a Config Tool scheduled task). Also on demand.
 //  Category        Integrations
-//  Visibility      Restricted
+//  Visibility      Public
 //  Platform        Security Center 5.13 (also targets 5.12)
 //
 //  Reads           Entities of the selected types (enumerated by an
