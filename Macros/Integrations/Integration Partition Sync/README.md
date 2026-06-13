@@ -5,6 +5,7 @@ Keeps a partition complete for selected entity types, so a third-party integrati
 | | |
 |---|---|
 | **Platform** | Security Center 5.13 (also targets 5.12) |
+| **Version** | 1.0.0 |
 | **Macro file** | `IntegrationPartitionSync.cs` (in this folder) |
 | **Trigger** | Scheduled (a Config Tool scheduled task). Also runs on demand. |
 | **Category** | `Integrations` |
@@ -124,6 +125,27 @@ No custom fields are required.
 - **Stop it running:** disable the scheduled task (Config Tool, then Tasks, then Scheduled tasks, set inactive), and/or set the Macro entity to disabled.
 - **Undo adds:** the macro never removes membership. If a run added something it should not have, remove that entity from the partition by hand in Config Tool.
 
+## If this macro is removed
+
+If the Macro entity is deleted or left disabled:
+
+- **What stops happening:** the scheduled top-up that keeps the target partition complete stops. New cardholders, credentials, doors, or areas of the selected types are no longer added to the partition.
+- **What keeps working:** the partition and everything already in it are untouched. The third-party integration keeps seeing every entity that was already a member. Removing the macro removes no memberships.
+- **What breaks or silently lapses:** the integration's view goes stale. Any new entity created after removal that should be in the partition is silently missed, which is the gap this macro closes.
+- **What to do instead:** add new entities to the partition by hand in Config Tool, or re-import the macro and run it (preview first, then Apply).
+
+## Troubleshooting
+
+If the macro behaves unexpectedly, find the symptom below.
+
+| Symptom (what you see) | Likely cause | What to do |
+|------------------------|--------------|------------|
+| The integration is missing entities even though the macro ran | The run was in preview mode (`Apply` unticked), or the missing entity's type was not selected. | Check the log for `wouldAdd=` (preview) versus `added=` (applied). Tick `Apply` and the relevant `Sync` type, then run again. |
+| Counts look lower than the real total | The run-as account is itself partition-scoped and can only see a subset. | Check the `scanned=` counts. Run the macro as an account with broad read access. |
+| Adds fail with a non-zero errors count | The run-as account lacks Manage partition memberships on the target partition. | Look for `Failed to add` lines. Grant the privilege or write access on the partition. |
+| Run stops before scanning anything | `TargetPartition` is empty or points at a deleted partition. | Look for `TargetPartition parameter is empty` or `No Partition found`. Re-pick the partition. |
+| Nothing happens at all | No entity types were selected. | Look for `No entity types selected`. Tick at least one `Sync` type. |
+
 ## Log strings worth grepping
 
 | Meaning | String |
@@ -134,3 +156,11 @@ No custom fields are required.
 | Per-type applied | `added=` / `errors=` |
 | An add failed | `Failed to add` |
 | Run failed | `Execute() failed.` |
+
+## Changelog
+
+Newest version first. The version here matches the Version field in the macro header and the Version row in the table above.
+
+### Version 1.0.0 (2026-06-06)
+
+- First release.
