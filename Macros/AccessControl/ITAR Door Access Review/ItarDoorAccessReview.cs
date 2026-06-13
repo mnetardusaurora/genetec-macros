@@ -12,6 +12,7 @@
 //                  task). Not a persistent monitor.
 //  Category        AccessControl
 //  Visibility      Public
+//  Version         1.0.0
 //                  NOTE: Public marks this macro as eligible for the public
 //                  catalog only AFTER security and IP review. It contains ITAR
 //                  relevant detection logic, so it must be reviewed by the ISSM
