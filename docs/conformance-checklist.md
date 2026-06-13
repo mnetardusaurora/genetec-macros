@@ -27,6 +27,10 @@ macro adopts them.
 - [ ] Every entity, custom field, and parameter is listed in "Data it touches".
 - [ ] The flowchart and architecture-impact Mermaid diagrams are present and accurate.
 - [ ] Failure modes, risks, rollback, and log strings are filled in.
+- [ ] The at-a-glance table has a Version row that matches the `.cs` header Version field.
+- [ ] The guide has an `If this macro is removed` section, filled in for this macro.
+- [ ] The guide has a `Troubleshooting` section with symptoms specific to this macro.
+- [ ] The guide has a `Changelog` section whose newest entry matches the Version row.
 - [ ] Same tone rules as the macro file.
 
 ## TechSec Concepts
@@ -40,6 +44,16 @@ macro adopts them.
 - [ ] Visibility is decided deliberately. A macro is Restricted unless there is a clear reason to publish it.
 - [ ] If Restricted, the macro is NOT added to the public catalog allowlist. Publishing is fail-closed: only macros explicitly marked Public and added to the catalog navigation are published.
 - [ ] If Public, a security and IP review has confirmed the macro and guide carry no sensitive content before it is published.
+
+## Versioning
+
+- [ ] The macro carries a version in three places that all match: the README Version row, the `.cs` header Version field, and the newest Changelog entry.
+- [ ] The version uses semantic numbering, MAJOR.MINOR.PATCH:
+      - MAJOR for a breaking change, such as a new required parameter, changed behavior, or a new write to the system.
+      - MINOR for a new optional capability that does not break an existing setup.
+      - PATCH for a bugfix or internal change with no behavior change for the operator.
+- [ ] The first shipped release is 1.0.0.
+- [ ] A change to the guide text alone does not bump the version. The version tracks macro behavior.
 
 ## Verification
 
