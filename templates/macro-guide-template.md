@@ -5,6 +5,7 @@
 | | |
 |---|---|
 | **Platform** | Security Center 5.13 (also targets 5.12) |
+| **Version** | <MAJOR.MINOR.PATCH> |
 | **Macro file** | `<ClassName>.cs` (in this folder) |
 | **Trigger** | <Scheduled | Event-driven | On-demand> |
 | **Category** | `<Macros subfolder>` |
@@ -88,6 +89,24 @@ flowchart LR
 - **Stop it running:** <how to disable the macro or its scheduled task.>
 - **Undo its writes:** <how to reverse anything it changed, or state that it writes nothing.>
 
+## If this macro is removed
+
+If the Macro entity is deleted or left disabled:
+
+- **What stops happening:** <the recurring action this macro performed, in plain language>.
+- **What keeps working:** <core Security Center behavior that does not depend on this macro, so the reader knows the base system is unaffected>.
+- **What breaks or silently lapses:** <any check, sync, or alarm that no longer runs, and why that matters>.
+- **What to do instead:** <the manual fallback or alternative, or state that none is needed>.
+
+## Troubleshooting
+
+If the macro behaves unexpectedly, find the symptom below.
+
+| Symptom (what you see) | Likely cause | What to do |
+|------------------------|--------------|------------|
+| <observed behavior> | <likely cause> | <fix, and the log string from the section below to confirm it> |
+| <second symptom> | <likely cause> | <action> |
+
 ## Log strings worth grepping
 
 | Meaning | String |
@@ -95,3 +114,11 @@ flowchart LR
 | Run started / finished | `Execute() started.` / `Execute() completed.` |
 | <key decision> | `<log string>` |
 | Run failed | `Execute() failed.` |
+
+## Changelog
+
+Newest version first. The version here matches the Version field in the macro header and the Version row in the table above. A change to the guide alone does not bump the version. The version tracks macro behavior.
+
+### Version <MAJOR.MINOR.PATCH> (YYYY-MM-DD)
+
+- First release.
