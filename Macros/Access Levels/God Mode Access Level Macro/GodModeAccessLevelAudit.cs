@@ -9,6 +9,7 @@
 //                  runs on demand.
 //  Category        Access Levels
 //  Visibility      Public
+//  Version         1.0.0
 //  Platform        Security Center 5.13 (also targets 5.12)
 //
 //  Reads           Door entities (enumerated by an EntityConfigurationQuery), and
