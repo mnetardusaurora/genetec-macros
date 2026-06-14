@@ -157,6 +157,12 @@ If the macro behaves unexpectedly, find the symptom below.
 | An add failed | `Failed to add` |
 | Run failed | `Execute() failed.` |
 
+## Customizing for your environment
+
+- **Choose which entity types sync.** The `SyncCardholders`, `SyncCredentials`, `SyncDoors`, and `SyncAreas` checkboxes decide what gets reconciled. Tick only the types your integration consumes.
+- **Add a type that is not on the list.** The four supported types are set in `BuildSelectedTypes()`. To add another, declare a new `Sync<Type>` boolean property and add one line that maps it to the matching `EntityType` value.
+- **Preview before you write.** Leave `Apply` unticked for a dry run that only logs what it would add. Tick it when you are ready to write.
+
 ## Changelog
 
 Newest version first. The version here matches the Version field in the macro header and the Version row in the table above.

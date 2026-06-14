@@ -153,6 +153,15 @@ If the macro behaves unexpectedly, find the symptom below.
 | Completion summary | `Completion summary:` |
 | Run failed | `Execute() failed.` |
 
+## Customizing for your environment
+
+The macro ships with fifty mapping slots, named `Area01`/`Partition01` through `Area50`/`Partition50`. Each pair maps one area to one partition.
+
+- **Use fewer mappings.** Fill in only the slots you need and leave the rest empty. There is no code change for using fewer than fifty.
+- **Add more than fifty.** Open the macro file and find the block of paired lines that look like `public Guid Area01 { get; set; }  public Guid Partition01 { get; set; }`. Copy the pattern and keep the numbering going, for example `public Guid Area51 { get; set; }  public Guid Partition51 { get; set; }`. That block is the only place the count is set.
+- **Show fewer slots in Config Tool.** Delete the trailing `AreaNN`/`PartitionNN` lines you do not need.
+- **Preview before you write.** Leave `ReportOnlyMode` true for a dry run that logs every change it would make. Set it false when you are ready to write membership.
+
 ## Changelog
 
 Newest version first. The version here matches the Version field in the macro header and the Version row in the table above.

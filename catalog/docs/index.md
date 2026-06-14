@@ -1,26 +1,20 @@
 # Genetec Security Center Macros
 
-I have worked in electronic security my whole career, and over the years I kept building small Genetec Security Center macros to fix the same recurring problems. This site is where I share the ones that are general enough to help other teams.
+I build and run Genetec Security Center macros in the field, and this is where I share the ones that are general enough to help other security teams. Each macro solves a specific, recurring problem in access control and physical security, and each comes with a plain-language guide.
 
-None of these are products. They are ideas, written down as working code, that solved a real problem for me. If one of them helps your team, that is the point. And if you look at one and see a better way to do it, I want to hear about it so we can build something better together.
+Every one of them started as a real problem on a real system. A door nobody remembered to add to the master access rule. A partition an integration could only half see. The sort of thing you tend to find at the worst possible moment. These macros close those gaps and keep them closed.
 
-## What these are
+## Using one
 
-A macro here is a single C# file that you paste into a Macro entity in the Genetec Config Tool. Security Center compiles it at runtime. There is no installer and no build step. Every macro page explains what the macro does, every piece of data it touches, how it can fail, and the risks to weigh before you run it.
+A macro here is a single C# file. Open its page, read it, then paste the file into a Macro entity in the Genetec Config Tool. Security Center compiles it when you apply, so there is nothing to install.
 
-## How to use one
-
-1. Open the macro's page and read the guide end to end, especially the failure modes and the troubleshooting notes.
+1. Open the macro's page and read the guide end to end, especially the failure modes and risks.
 2. Copy the macro file into a new Macro entity in Config Tool.
 3. Set the parameters the guide lists.
 4. Test it in a lab or staging system before you point it at production. These macros act on live access control, so a careful first run matters.
 
-## A note on safety
+## Make them your own
 
 These are tools, not turnkey products. Read each guide, understand what the macro writes, and confirm the behavior in a non-production system first. Where a macro can change live configuration, its guide says so and explains how to roll back.
 
-## Found a better way, or want to collaborate?
-
-I would rather these get better over time than stay frozen. If you spot a bug, a sharper approach, or a problem worth solving, reach out on GitHub at [mnetardusaurora](https://github.com/mnetardusaurora) or email me at mnetardus@auroranexus.ai.
-
-Browse the [macros](macros/index.md), or read more [about me](about.md).
+Have a look at the [macros](macros/index.md), or read a bit [about me](about.md).
