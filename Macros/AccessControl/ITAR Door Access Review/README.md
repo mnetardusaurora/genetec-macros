@@ -14,6 +14,7 @@ you turn report-only mode off.
 | Platform | Security Center 5.13 (also targets 5.12) |
 | Macro file | `ItarDoorAccessReview.cs` (in this folder) |
 | Trigger | A Config Tool **Scheduled task** (see *Scheduling* below) |
+| **Version** | 1.0.0 |
 | **Visibility** | Public (security and IP review completed 2026-06-06) |
 | Modifies anything? | **No.** Read only. Raises the chosen alarm when live. |
 | Compliance relevance | **ITAR (22 CFR 120-130).** ISSM review required before live alarms. |
@@ -283,6 +284,31 @@ attached to the alarm. One alarm is raised per violating cardholder.
 
 ---
 
+## If this macro is removed
+
+If the Macro entity is deleted or left disabled:
+
+- **What stops happening:** the scheduled review that finds non US Person cardholders who can still reach an ITAR marked door stops. No new violations are detected and no alarms are raised.
+- **What keeps working:** the macro is read only, so removing it changes no access, no membership, and no configuration. Every cardholder keeps exactly the access they had. Doors, the US Person group, and the ITAR custom field are untouched.
+- **What breaks or silently lapses:** the compliance check lapses. A cardholder who gains ITAR door access after removal is not flagged and no alarm is raised, so an ITAR exposure can go unnoticed. This is a compliance-relevant gap.
+- **What to do instead:** review ITAR door entitlements by hand, or re-import the macro and run it in report-only mode. Tell the ISSM that automated ITAR review is paused.
+
+---
+
+## Troubleshooting
+
+If the macro behaves unexpectedly, find the symptom below.
+
+| Symptom (what you see) | Likely cause | What to do |
+|------------------------|--------------|------------|
+| No alarms raised | The macro is in report-only mode, or there are genuinely no violations. | Check for `Would have raised alarm` (report-only) versus `Raised alarm instance`. Set `ReportOnlyMode` false only after ISSM review. |
+| The macro reports no ITAR doors | The Door `ITAR` custom field is missing from the schema, or no door's value means true. | The macro fails loudly when the field is missing. Look for `ITAR door field resolved.` and `are ITAR controlled.` Confirm the field name and the exact true value in Config Tool. |
+| A cardholder you expected is not flagged | They are in the US Person group (directly or through a nested group), or a partition or active filter excluded them. | Check `PartitionScope` and `ActiveCardholdersOnly`, and confirm the cardholder's group membership. |
+| Warnings about verification gaps | The access verifier returned an inconclusive or error result for a credential at a door. | Look for `Access verification gap for cardholder`. Review these by hand, since an inconclusive result can hide a real grant. |
+| The run fails instead of reporting no violations | The macro could not read doors or cardholders, so it refuses a false all-clear. | Look for `Execute() failed.` Check directory health and the run-as account's read rights, then re-run. |
+
+---
+
 ## Log strings worth grepping
 
 | Meaning | String |
@@ -296,3 +322,13 @@ attached to the alarm. One alarm is raised per violating cardholder.
 | Report-only simulation | `Would have raised alarm` |
 | Run summary | `Review summary:` |
 | Run failed (review could not complete) | `Execute() failed.` |
+
+---
+
+## Changelog
+
+Newest version first. The version here matches the Version field in the macro header and the Version row in the At a glance table.
+
+### Version 1.0.0 (2026-06-06)
+
+- First release.
