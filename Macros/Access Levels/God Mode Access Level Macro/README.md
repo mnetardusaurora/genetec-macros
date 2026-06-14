@@ -5,6 +5,7 @@ Checks, on a schedule, that every door in the system is included in a chosen acc
 | | |
 |---|---|
 | **Platform** | Security Center 5.13 (also targets 5.12) |
+| **Version** | 1.0.0 |
 | **Macro file** | `GodModeAccessLevelAudit.cs` (in this folder) |
 | **Trigger** | Scheduled (a Config Tool scheduled task). Also runs on demand. |
 | **Category** | `Access Levels` |
@@ -127,6 +128,27 @@ No custom fields are required.
 - **Stop it running:** disable the scheduled task (Config Tool, then Tasks, then Scheduled tasks, set inactive), and/or set the Macro entity to disabled.
 - **Undo an auto-add:** the macro never removes doors. If a run added something it should not have, remove those access points from the rule by hand in Config Tool.
 
+## If this macro is removed
+
+If the Macro entity is deleted or left disabled:
+
+- **What stops happening:** the scheduled audit that checks every door against the God Mode access rule stops, and so does the optional auto-add. Newly onboarded doors that are missing from the rule are no longer detected or alarmed.
+- **What keeps working:** the God Mode access rule and all existing door memberships are untouched. Doors already in the rule keep granting access exactly as before. Removing the macro changes nothing about live access control.
+- **What breaks or silently lapses:** coverage drift goes unnoticed. A door added after the macro is removed can sit outside the God Mode rule indefinitely with no alarm, which is the gap this macro exists to close.
+- **What to do instead:** check the God Mode rule's membership against the full door list by hand in Config Tool, or re-import the macro and run it on demand.
+
+## Troubleshooting
+
+If the macro behaves unexpectedly, find the symptom below.
+
+| Symptom (what you see) | Likely cause | What to do |
+|------------------------|--------------|------------|
+| No alarms raised even though a door looks missing | The door is actually in the rule, or `MissingDoorAlarm` points at an alarm with no recipients. | Check the log for `MISSING: door` lines. If there are none, the door is in the rule. If there are, open the alarm and confirm its recipients. |
+| Run stops immediately with nothing scanned | A required parameter GUID is empty, or the rule or alarm was deleted. | Look for `parameter is empty`, `No AccessRule found`, or `No Alarm found`. Re-pick the rule and alarm in the entity browser. |
+| Auto-add seems to do nothing | `EnableAutoAdd` is off, or the run-as account lacks rights to write rule membership. | Confirm `EnableAutoAdd` is true, then check for `Failed to auto-add door` lines. |
+| A door keeps getting flagged even after auto-add | Adding on the access-point side may not be reflected on the rule side on your version, or a door side was not added. | Confirm membership by hand in Config Tool. The audit re-flags anything not truly in the rule, so trust the alarm over the auto-add. |
+| Run fails loudly with no door count | The door enumeration query failed, so the macro refuses a false all-clear. | Look for `Door enumeration query failed` then `Execute() failed.` Check directory health and re-run. |
+
 ## Log strings worth grepping
 
 | Meaning | String |
@@ -145,3 +167,11 @@ This macro is a starting point, not a finished product. The changes people make 
 - **Audit a different rule.** Point `GodModeAccessRule` at whichever access rule should contain every door. Nothing in the code is tied to one rule.
 - **Turn on auto-add once you trust it.** Leave `EnableAutoAdd` off while you read the reports. Set it true when the missing-door list looks right, and the macro adds the access points for you.
 - **Audit more than one rule.** The simplest way is to create a second Macro entity from the same file and point it at the other rule. If you would rather one run cover several rules, change `GodModeAccessRule` from a single parameter into a short list and loop over it in `Execute()`.
+
+## Changelog
+
+Newest version first. The version here matches the Version field in the macro header and the Version row in the table above.
+
+### Version 1.0.0 (2026-05-31)
+
+- First release.

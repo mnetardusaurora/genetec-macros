@@ -13,6 +13,7 @@
 //                  The macro does no scheduling of its own.
 //  Category        Integrations
 //  Visibility      Public
+//  Version         1.0.0
 //  Platform        Security Center 5.13 (also targets 5.12)
 //
 //  Reads           Area subtree membership (Area.AllDoors, Area.Cameras,
